@@ -3,8 +3,15 @@
 #include <sys/ptrace.h>
 #include <linux/ptrace.h> // glibc doesn't necessarily expose the ptrace_syscall_info struct
 #include <sys/wait.h>
+#include <string.h>
 
 #include "sysnr_map.h" // map syscall numbers to their names
+
+void init_trace(int child_pid) {
+    // TODO: PTRACE_O_TRACEEXEC
+    ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK);
+    ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -32,17 +39,25 @@ int main(int argc, char** argv) {
                 printf("Child process exited\n");
             } else if (WIFSTOPPED(wstatus)) {
                 int stop_sig = WSTOPSIG(wstatus);
+                int event_code = wstatus>>8;
+                switch (event_code) {
+                    case (SIGTRAP | (PTRACE_EVENT_CLONE<<8)):
+                    case (SIGTRAP | (PTRACE_EVENT_FORK<<8)):
+                        unsigned long new_pid;
+                        ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
+                        printf("[!] Caught ptrace event! Starting tracer on %lu\n", new_pid);
+                        init_trace(new_pid);
+                        break;
+                }
                 switch (stop_sig) {
                     case SIGTRAP:
-                        // TODO: PTRACE_O_TRACEEXEC
-                        ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD);
-                        ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
+                        init_trace(child_pid);
                         break;
                     case SIGTRAP | 0x80:
                         ptrace(PTRACE_GET_SYSCALL_INFO, child_pid, sizeof(syscall_info), &syscall_info);
                         switch (syscall_info.op) {
                             case PTRACE_SYSCALL_INFO_ENTRY:
-                                printf("SYS_%s [%lu] @ %#08lx", sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
+                                printf("[PID=%lu] SYS_%s [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
                                 break;
                             case PTRACE_SYSCALL_INFO_EXIT:
                                 printf(" -> %ld\n", syscall_info.exit.rval);
@@ -57,8 +72,8 @@ int main(int argc, char** argv) {
                         ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
                         break;
                     default:
-                        // TODO: we might need to continue the process here for some signals
-                        fputs("Error: signal is not yet handled by the tracer!\n", stderr);
+                        printf("Warning: forwarding signal `%s` to process %lu\n", strsignal(stop_sig), child_pid);
+                        ptrace(PTRACE_SYSCALL, child_pid, NULL, stop_sig);
                         break;
                 }
             }

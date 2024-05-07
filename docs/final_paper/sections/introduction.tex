@@ -1,8 +1,9 @@
 \section{Introduction}
 Operating systems allow applications to perform sensitive operations through the use of system calls. The idea of system call sanboxing is to restrict the available system calls for each application to the minimum required set in order to adhere to the principle of least privilege and reduce the potential attack surface in case the application has a vulnerability.
 
-Existing work focuses on generating the required set of system calls automatically, through statically analyzing the source code and call graph of the binary as well as removing unused parts from the final program \cite{ref_sp_1}  \cite{ref_sp_3} \cite{ref_sp_2} \cite{ref_mp_1}.
+Existing work focuses on generating the required set of system calls automatically, through statically analyzing the call graph and control flow of the binary or performing compile-time analysis \cite{ref_sp_1} \cite{ref_sp_3} \cite{ref_sp_2}.
 Another approach that is taken is to dynamically analyze the application and obtain the set of used system calls that way \cite{ref_dyn_1}, but more commonly a general appoach of removing unused parts of the applications (debloating) is taken \cite{ref_debloat_1} \cite{ref_debloat_2}. % ref_sp_2 -> 75 (dyn); ref_mp_1 -> 21, 48 (debloat)
+Overarching these approaches, some existing work tries to establish different phases of execution to generate a finer grained set of system calls to block per phase \cite{ref_mp_1}.
 
 While static analysis is able to generate accurate results it is often costly to perform \cite{ref_sp_1} and techniques can quickly become complicated as the size of the application scales.
 On the other hand dynamic analysis techniques tend to result in less accuracy \cite{ref_sp_3}, while being simpler to scale to larger applications.

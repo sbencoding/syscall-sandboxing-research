@@ -1,0 +1,29 @@
+\section{Introduction}
+Operating systems allow applications to perform sensitive operations through the use of system calls. The idea of system call sanboxing is to restrict the available system calls for each application to the minimum required set in order to adhere to the principle of least privilege and reduce the potential attack surface in case the application has a vulnerability.
+
+Existing work focuses on generating the required set of system calls automatically, through statically analyzing the source code and call graph of the binary as well as removing unused parts from the final program. % TODO: refer to posted papers
+Another approach that is taken is to dynamically analyze the application and obtain the set of used system calls that way. % TODO: refer to some dynamic analysis papers
+
+While static analysis is able to generate accurate results it is often costly to perform and techniques can quickly become complicated as the size of the application scales. % TODO: reference for this
+On the other hand dynamic analysis techniques tend to result in unsound and incomplete results. % TODO: reference for this
+This raises a question about what exactly the trade-off is between these 2 different approaches in terms of runtime and accuracy, and when should one be preferred over the other.
+
+The aim of this work is to explore the difference between these 2 approaches and to report the runtime and accuracy of various different implementations relying on static analysis.
+More specifically this work poses the following 3 research questions:
+\begin{itemize}
+    \item{\textbf{RQ1:} How can we use dynamic analysis to gather a list of system calls for selected applications, so that they can be used as ground truth for comparing other static analysis based solutions?}
+    \item{\textbf{RQ2:} How do different static analysis based solutions compare in terms of accuracy and runtime when considering applications that have a single execution phase?}
+    \item{\textbf{RQ3:} How do different static analysis based solutions compare in terms of accuracy and runtime when considering applications that have multiple execution phases?}
+\end{itemize}
+
+The main contributions of this research are:
+\begin{itemize}
+    \item{A simple dynamic analysis implementation that generates a list of required system calls.}
+    \item{Analysis in terms of runtime and accuracy of some existing static analysis based solutions.}
+    \item{To conclude, a comparison between the dynamic and static analysis approach}
+\end{itemize}
+
+The following sections first give more background information on the topic, after which the simple dynamic analysis tool is introduced and discussed.
+Afterwards, the experiment is described in detail and the runtime and accuracy results are given.
+Next, a short section about ethical aspects and reproducibility is given, followed by a brief discussion of the results.
+To wrap up the paper finishes with concluding thoughts and possible future work.

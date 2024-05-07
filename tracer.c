@@ -6,11 +6,18 @@
 #include <string.h>
 
 #include "sysnr_map.h" // map syscall numbers to their names
+#include "pstree.h" // Process tree info storage
+
+#define VERBOSE_TRACE
 
 void init_trace(int child_pid) {
     // TODO: PTRACE_O_TRACEEXEC
     ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK);
     ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
+}
+
+void mk_banner(const char* banner_text) {
+    printf("\n\033[1;35m====================%s====================\033[0m\n\n", banner_text);
 }
 
 int main(int argc, char** argv) {
@@ -20,16 +27,17 @@ int main(int argc, char** argv) {
     }
 
     printf("Going to trace: %s\n", argv[1]);
-    pid_t child_pid = fork();
-    if (child_pid == 0) {
+    pid_t root_child_pid = fork();
+    if (root_child_pid == 0) {
         printf("Child requesting trace by the parent");
         ptrace(PTRACE_TRACEME, NULL, NULL, NULL);
         execve(argv[1], &argv[2], NULL);
     } else {
-        printf("Starting up the tracer\n");
+        mk_banner("Starting up the tracer");
         int wstatus;
         int child_pid;
         struct ptrace_syscall_info syscall_info;
+        struct pstree* ps_root = pstree_mknode(root_child_pid);
 
         while ((child_pid = waitpid(-1, &wstatus, 0)) != -1) {
             if (WIFSIGNALED(wstatus)) {
@@ -45,7 +53,11 @@ int main(int argc, char** argv) {
                     case (SIGTRAP | (PTRACE_EVENT_FORK<<8)):
                         unsigned long new_pid;
                         ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
-                        printf("[!] Caught ptrace event! Starting tracer on %lu\n", new_pid);
+                        printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
+                        struct pstree* ps_child = pstree_mknode(new_pid);
+                        struct pstree* ps_parent = pstree_find(ps_root, child_pid);
+                        pstree_insert_child(ps_parent, ps_child);
+
                         init_trace(new_pid);
                         break;
                 }
@@ -55,12 +67,26 @@ int main(int argc, char** argv) {
                         break;
                     case SIGTRAP | 0x80:
                         ptrace(PTRACE_GET_SYSCALL_INFO, child_pid, sizeof(syscall_info), &syscall_info);
+#ifdef VERBOSE_TRACE
+                        struct pstree* caller;
+#endif
                         switch (syscall_info.op) {
                             case PTRACE_SYSCALL_INFO_ENTRY:
-                                printf("[PID=%lu] SYS_%s [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
+#ifdef VERBOSE_TRACE
+                                caller = pstree_find(ps_root, child_pid);
+                                caller->syscall.ip = syscall_info.instruction_pointer;
+                                caller->syscall.syscall_nr = syscall_info.entry.nr;
+#else
+                                printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
+#endif
                                 break;
                             case PTRACE_SYSCALL_INFO_EXIT:
+#ifdef VERBOSE_TRACE
+                                caller = pstree_find(ps_root, child_pid);
+                                printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx -> %ld\n", child_pid, sysnr_map[caller->syscall.syscall_nr], caller->syscall.syscall_nr, caller->syscall.ip, syscall_info.exit.rval);
+#else
                                 printf(" -> %ld\n", syscall_info.exit.rval);
+#endif
                                 break;
                             case PTRACE_SYSCALL_INFO_SECCOMP:
                                 puts("This syscall contains seccomp info, not yet handled by the tracer");
@@ -72,11 +98,15 @@ int main(int argc, char** argv) {
                         ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
                         break;
                     default:
-                        printf("Warning: forwarding signal `%s` to process %lu\n", strsignal(stop_sig), child_pid);
+                        printf("\033[1;33mWarning:\033[0m forwarding signal `%s` to process %lu\n", strsignal(stop_sig), child_pid);
                         ptrace(PTRACE_SYSCALL, child_pid, NULL, stop_sig);
                         break;
                 }
             }
         }
+
+        mk_banner("Recorded PS Tree");
+        pstree_print(ps_root, 0);
+        pstree_free(ps_root);
     }
 }

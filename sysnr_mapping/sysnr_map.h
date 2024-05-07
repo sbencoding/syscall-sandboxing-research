@@ -1,4 +1,4 @@
-/* Generated from /usr/include/asm/unistd_64.h (<function release at 0x749abcceae80>) */
+/* Generated from /usr/include/asm/unistd_64.h (6.8.7-arch1-2) */
 const char *sysnr_map[] = {
 "read",
 "write",

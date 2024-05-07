@@ -16,7 +16,7 @@ with open(sys.argv[1], 'r') as infile:
         syscall_table.append((int(match.group(2)), match.group(1)))
 
 syscall_table = sorted(syscall_table)
-print(f'/* Generated from {sys.argv[1]} ({platform.release}) */')
+print(f'/* Generated from {sys.argv[1]} ({platform.release()}) */')
 print('const char *sysnr_map[] = {')
 prev_nr = -1
 for syscall in syscall_table:

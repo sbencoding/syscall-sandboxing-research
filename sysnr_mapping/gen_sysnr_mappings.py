@@ -17,6 +17,8 @@ with open(sys.argv[1], 'r') as infile:
 
 syscall_table = sorted(syscall_table)
 print(f'/* Generated from {sys.argv[1]} ({platform.release()}) */')
+print('#pragma once')
+print(f'#define N_SYSCALLS {syscall_table[-1][0] + 1}')
 print('const char *sysnr_map[] = {')
 prev_nr = -1
 for syscall in syscall_table:

@@ -1,4 +1,6 @@
 /* Generated from /usr/include/asm/unistd_64.h (6.8.7-arch1-2) */
+#pragma once
+#define N_SYSCALLS 457
 const char *sysnr_map[] = {
 "read",
 "write",

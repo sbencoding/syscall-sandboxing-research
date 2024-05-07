@@ -12,6 +12,8 @@
 
 void init_trace(int child_pid) {
     // TODO: PTRACE_O_TRACEEXEC
+    // TODO: vfork
+    // TODO: threads?
     ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK);
     ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
 }
@@ -19,6 +21,35 @@ void init_trace(int child_pid) {
 void mk_banner(const char* banner_text) {
     printf("\n\033[1;35m====================%s====================\033[0m\n\n", banner_text);
 }
+
+void print_syscall_stats(int* usage_array) {
+    for (int i = 0; i < N_SYSCALLS; ++i) {
+        if (usage_array[i] != 0) {
+            printf("%s - %d\n", sysnr_map[i], usage_array[i]);
+        }
+    }
+}
+
+void print_flat_syscall_list(int* usage_array) {
+    for (int i = 0; i < N_SYSCALLS; ++i) {
+        if (usage_array[i] != 0) {
+            printf("%s,", sysnr_map[i]);
+        }
+    }
+    putchar('\n');
+}
+
+void ps_callback_syscall_list(struct pstree* node) {
+    printf("\n\033[1;32mPID=%lu\033[0m\n", node->pid);
+    print_flat_syscall_list(node->syscall_usage);
+}
+
+void ps_callback_syscall_stats(struct pstree* node) {
+    printf("\n\033[1;32mPID=%lu\033[0m\n", node->pid);
+    print_syscall_stats(node->syscall_usage);
+}
+
+int syscall_usage[N_SYSCALLS] = {};
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -72,10 +103,12 @@ int main(int argc, char** argv) {
 #endif
                         switch (syscall_info.op) {
                             case PTRACE_SYSCALL_INFO_ENTRY:
+                            syscall_usage[syscall_info.entry.nr]++;
 #ifdef VERBOSE_TRACE
                                 caller = pstree_find(ps_root, child_pid);
                                 caller->syscall.ip = syscall_info.instruction_pointer;
                                 caller->syscall.syscall_nr = syscall_info.entry.nr;
+                                caller->syscall_usage[syscall_info.entry.nr]++;
 #else
                                 printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
 #endif
@@ -107,6 +140,19 @@ int main(int argc, char** argv) {
 
         mk_banner("Recorded PS Tree");
         pstree_print(ps_root, 0);
+
+        mk_banner("Per process syscall stats");
+        pstree_foreach(ps_root, &ps_callback_syscall_stats);
+
+        mk_banner("Per process syscall flat list");
+        pstree_foreach(ps_root, &ps_callback_syscall_list);
+
+        mk_banner("Recorded total syscalls");
+        print_syscall_stats(syscall_usage);
+
+        mk_banner("Flat total syscall list");
+        print_flat_syscall_list(syscall_usage);
+
         pstree_free(ps_root);
     }
 }

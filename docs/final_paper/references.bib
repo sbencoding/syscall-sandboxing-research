@@ -1,5 +1,92 @@
-@Manual{example,
-    title = {example referance},
-    author = {Firstname Lastname},
-    year = {1900},
+@inproceedings{ref_sp_1,
+author = {Canella, Claudio and Werner, Mario and Gruss, Daniel and Schwarz, Michael},
+title = {Automating Seccomp Filter Generation for Linux Applications},
+year = {2021},
+isbn = {9781450386531},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3474123.3486762},
+doi = {10.1145/3474123.3486762},
+abstract = {Software vulnerabilities undermine the security of applications. By blocking unused functionality, the impact of potential exploits can be reduced. While seccomp provides a solution for filtering syscalls, it requires manual implementation of filter rules for each individual application. Recent work has investigated approaches to automate this task. However, as we show, these approaches make assumptions that are not necessary or require overly time-consuming analysis.In this paper, we propose Chestnut, an automated approach for generating strict syscall filters with lower requirements and limitations. Chestnut comprises two phases, with the first phase consisting of two static components, i.e., a compiler and a binary analyzer, that statically extract the used syscalls. The compiler-based approach of Chestnut is up to factor 73 faster than previous approaches with the same accuracy. On the binary level, our approach extends over previous ones by also applying to non-PIC binaries. An optional second phase of Chestnut is dynamic refinement to restrict the set of allowed syscalls further. We demonstrate that Chestnut on average blocks 302 syscalls (86.5\%) via the compiler and 288 (82.5\%) using the binary analysis on a set of 18 applications. Chestnut blocks the dangerous exec syscall in 50\% and 77.7\% of the tested applications using the compiler- and binary-based approach, respectively. For the tested applications, Chestnut blocks exploitation of more than 61\% of the 175 CVEs that target the kernel via syscalls.},
+booktitle = {Proceedings of the 2021 on Cloud Computing Security Workshop},
+pages = {139–151},
+numpages = {13},
+keywords = {automated syscall filtering, linux, seccomp},
+location = {Virtual Event, Republic of Korea},
+series = {CCSW '21}
 }
+
+@inproceedings{ref_sp_2,
+  title={Confine: Automated System Call Policy Generation for Container Attack Surface Reduction},
+  author={Seyedhamed Ghavamnia and Tapti Palit and Azzedine Benameur and Michalis Polychronakis},
+  booktitle={International Symposium on Recent Advances in Intrusion Detection},
+  year={2020},
+  url={https://api.semanticscholar.org/CorpusID:220778345}
+}
+
+@inproceedings{ref_mp_1,
+author = {Ghavamnia, Seyedhamed and Palit, Tapti and Mishra, Shachee and Polychronakis, Michalis},
+title = {Temporal system call specialization for attack surface reduction},
+year = {2020},
+isbn = {978-1-939133-17-5},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {Attack surface reduction through the removal of unnecessary application features and code is a promising technique for improving security without incurring any additional overhead. Recent software debloating techniques consider an application's entire lifetime when extracting its code requirements, and reduce the attack surface accordingly.In this paper, we present temporal specialization, a novel approach for limiting the set of system calls available to a process depending on its phase of execution. Our approach is tailored to server applications, which exhibit distinct initialization and serving phases with different system call requirements. We present novel static analysis techniques for improving the precision of extracting the application's call graph for each execution phase, which is then used to pinpoint the system calls used in each phase. We show that requirements change throughout the lifetime of servers, and many dangerous system calls (such as execve) can be disabled after the completion of the initialization phase. We have implemented a prototype of temporal specialization on top of the LLVM compiler, and evaluated its effectiveness with six popular server applications. Our results show that it disables 51\% more security-critical system calls compared to existing library specialization approaches, while offering the additional benefit of neutralizing 13 more Linux kernel vulnerabilities that could lead to privilege escalation.},
+booktitle = {Proceedings of the 29th USENIX Conference on Security Symposium},
+articleno = {99},
+numpages = {18},
+series = {SEC'20}
+}
+
+@inproceedings{ref_sp_3,
+  title={sysfilter: Automated System Call Filtering for Commodity Software},
+  author={Nicholas DeMarinis and Kent Williams-King and Di Jin and Rodrigo Fonseca and Vasileios P. Kemerlis},
+  booktitle={International Symposium on Recent Advances in Intrusion Detection},
+  year={2020},
+  url={https://api.semanticscholar.org/CorpusID:223081174}
+}
+
+@INPROCEEDINGS{ref_dyn_1,
+  author={Wan, Zhiyuan and Lo, David and Xia, Xin and Cai, Liang and Li, Shanping},
+  booktitle={2017 IEEE International Conference on Software Testing, Verification and Validation (ICST)}, 
+  title={Mining Sandboxes for Linux Containers}, 
+  year={2017},
+  volume={},
+  number={},
+  pages={92-102},
+  keywords={Containers;Testing;Kernel;Linux;Cloud computing;Monitoring;Tools},
+  doi={10.1109/ICST.2017.16}}
+
+@inproceedings{ref_debloat_1,
+author = {Ghaffarinia, Masoud and Hamlen, Kevin W.},
+title = {Binary Control-Flow Trimming},
+year = {2019},
+isbn = {9781450367479},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3319535.3345665},
+doi = {10.1145/3319535.3345665},
+abstract = {A new method of automatically reducing the attack surfaces of binary software is introduced, affording code consumers the power to remove features that are unwanted or unused in a particular deployment context. The approach targets stripped binary native code with no source-derived metadata or symbols, can remove semantic features irrespective of whether they were intended and/or known to code developers, and anticipates consumers who can demonstrate desired features (e.g., via unit testing), but who may not know the existence of specific unwanted features, and who lack any formal specifications of the code's semantics.Through a combination of runtime tracing, machine learning, in-lined reference monitoring, and contextual control-flow integrity enforcement, it is demonstrated that automated code feature removal is nevertheless feasible under these constraints, even for complex programs such as compilers and servers. The approach additionally accommodates consumers whose demonstration of desired features is incomplete; a tunable entropy-based metric detects coverage lapses and conservatively preserves unexercised but probably desired flows. A prototype implementation for Intel x86-64 exhibits low runtime overhead for trimmed binaries (about 1.87\%), and case studies show that consumer-side control-flow trimming can successfully eliminate zero-day vulnerabilities.},
+booktitle = {Proceedings of the 2019 ACM SIGSAC Conference on Computer and Communications Security},
+pages = {1009–1022},
+numpages = {14},
+keywords = {software debloating, control-flow integrity},
+location = {London, United Kingdom},
+series = {CCS '19}
+}
+
+
+@inproceedings{ref_debloat_2,
+title = "Razor: A framework for post-deployment software debloating",
+abstract = "Commodity software typically includes a large number of functionalities for a broad user population. However, each individual user usually only needs a small subset of all supported functionalities. The bloated code not only hinders optimal execution, but also leads to a larger attack surface. Recent works have explored program debloating as an emerging solution to this problem. Unfortunately, these works require program source code, limiting their real-world deployability. In this paper, we propose a practical debloating framework, RAZOR, that performs code reduction for deployed binaries. Based on users' specifications, our tool customizes the binary to generate a functional program with minimal code size. Instead of only supporting given test cases, RAZOR takes several control-flow heuristics to infer complementary code that is necessary to support user-expected functionalities. We evaluated RAZOR on commonly used benchmarks and real-world applications, including the web browser FireFox and the close-sourced PDF reader FoxitReader. The result shows that RAZOR is able to reduce over 70% of the code from the bloated binary. It produces functional programs and does not introduce any security issues. RAZOR is thus a practical framework for debloating real-world programs.",
+author = "Chenxiong Qian and Hong Hu and Mansour Alharthi and Chung, {Pak Ho} and Taesoo Kim and Wenke Lee",
+note = "Publisher Copyright: {\textcopyright} 2019 by The USENIX Association. All rights reserved.; 28th USENIX Security Symposium ; Conference date: 14-08-2019 Through 16-08-2019",
+year = "2019",
+language = "English (US)",
+series = "Proceedings of the 28th USENIX Security Symposium",
+publisher = "USENIX Association",
+pages = "1733--1750",
+booktitle = "Proceedings of the 28th USENIX Security Symposium",
+
+}
+

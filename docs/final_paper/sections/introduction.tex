@@ -1,11 +1,11 @@
 \section{Introduction}
 Operating systems allow applications to perform sensitive operations through the use of system calls. The idea of system call sanboxing is to restrict the available system calls for each application to the minimum required set in order to adhere to the principle of least privilege and reduce the potential attack surface in case the application has a vulnerability.
 
-Existing work focuses on generating the required set of system calls automatically, through statically analyzing the source code and call graph of the binary as well as removing unused parts from the final program. % TODO: refer to posted papers
-Another approach that is taken is to dynamically analyze the application and obtain the set of used system calls that way. % TODO: refer to some dynamic analysis papers
+Existing work focuses on generating the required set of system calls automatically, through statically analyzing the source code and call graph of the binary as well as removing unused parts from the final program \cite{ref_sp_1}  \cite{ref_sp_3} \cite{ref_sp_2} \cite{ref_mp_1}.
+Another approach that is taken is to dynamically analyze the application and obtain the set of used system calls that way \cite{ref_dyn_1}, but more commonly a general appoach of removing unused parts of the applications (debloating) is taken \cite{ref_debloat_1} \cite{ref_debloat_2}. % ref_sp_2 -> 75 (dyn); ref_mp_1 -> 21, 48 (debloat)
 
-While static analysis is able to generate accurate results it is often costly to perform and techniques can quickly become complicated as the size of the application scales. % TODO: reference for this
-On the other hand dynamic analysis techniques tend to result in unsound and incomplete results. % TODO: reference for this
+While static analysis is able to generate accurate results it is often costly to perform \cite{ref_sp_1} and techniques can quickly become complicated as the size of the application scales.
+On the other hand dynamic analysis techniques tend to result in less accuracy \cite{ref_sp_3}, while being simpler to scale to larger applications.
 This raises a question about what exactly the trade-off is between these 2 different approaches in terms of runtime and accuracy, and when should one be preferred over the other.
 
 The aim of this work is to explore the difference between these 2 approaches and to report the runtime and accuracy of various different implementations relying on static analysis.

@@ -13,7 +13,6 @@
 void init_trace(int child_pid) {
     // TODO: PTRACE_O_TRACEEXEC
     // TODO: vfork
-    // TODO: threads?
     ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK);
     ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
 }

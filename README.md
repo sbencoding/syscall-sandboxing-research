@@ -15,9 +15,10 @@ This is the start of a simple tracer that aims to provide information about what
 * Colors!
 * Trace child processes of the traced parent process
 * Aggregate syscall statistics for a single run of the program
+* Trace all threads to the traced parent process
 
 ## Missing features
-* Trace all threads to the traced parent process
+* Killing tracer at any point should kill all children and still collect and print all stats
 * Aggregate syscall statistics for multiple runs of the program
 * Devise a way to generate inputs / interact with the traced program
     - this can be just a framework for now which delegates the actual input generation/interaction to another process

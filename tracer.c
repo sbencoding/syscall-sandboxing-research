@@ -4,6 +4,7 @@
 #include <linux/ptrace.h> // glibc doesn't necessarily expose the ptrace_syscall_info struct
 #include <sys/wait.h>
 #include <string.h>
+#include <limits.h> // for PATH_MAX
 
 #include "sysnr_map.h" // map syscall numbers to their names
 #include "pstree.h" // Process tree info storage
@@ -11,9 +12,8 @@
 #define VERBOSE_TRACE
 
 void init_trace(int child_pid) {
-    // TODO: PTRACE_O_TRACEEXEC
     // TODO: vfork
-    ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK);
+    ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEEXEC);
     ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
 }
 
@@ -39,16 +39,24 @@ void print_flat_syscall_list(int* usage_array) {
 }
 
 void ps_callback_syscall_list(struct pstree* node) {
-    printf("\n\033[1;32mPID=%lu\033[0m\n", node->pid);
+    printf("\n\033[1;32mPID=%lu\033[0m - %s\n", node->pid, node->exe_path);
     print_flat_syscall_list(node->syscall_usage);
 }
 
 void ps_callback_syscall_stats(struct pstree* node) {
-    printf("\n\033[1;32mPID=%lu\033[0m\n", node->pid);
+    printf("\n\033[1;32mPID=%lu\033[0m - %s\n", node->pid, node->exe_path);
     print_syscall_stats(node->syscall_usage);
 }
 
 int syscall_usage[N_SYSCALLS] = {};
+char cur_proc_exe_link[PATH_MAX];
+
+char* get_proc_path(unsigned long pid) {
+    snprintf(cur_proc_exe_link, PATH_MAX, "/proc/%lu/exe", pid);
+    char* exe_path = (char*) malloc(PATH_MAX * sizeof(char));
+    readlink(cur_proc_exe_link, exe_path, PATH_MAX * sizeof(char));
+    return exe_path;
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -59,7 +67,7 @@ int main(int argc, char** argv) {
     printf("Going to trace: %s\n", argv[1]);
     pid_t root_child_pid = fork();
     if (root_child_pid == 0) {
-        printf("Child requesting trace by the parent");
+        printf("Child requesting trace by the parent\n");
         ptrace(PTRACE_TRACEME, NULL, NULL, NULL);
         execve(argv[1], &argv[2], NULL);
     } else {
@@ -67,9 +75,13 @@ int main(int argc, char** argv) {
         int wstatus;
         int child_pid;
         struct ptrace_syscall_info syscall_info;
-        struct pstree* ps_root = pstree_mknode(root_child_pid);
+        struct pstree* ps_root = pstree_mknode(root_child_pid, NULL);
 
         while ((child_pid = waitpid(-1, &wstatus, 0)) != -1) {
+            if (ps_root->exe_path == NULL) {
+                ps_root->exe_path = get_proc_path(ps_root->pid);
+            }
+
             if (WIFSIGNALED(wstatus)) {
                 // TODO: we might need to continue (forward signal) the process here for some signals
                 printf("We are stopping because of a signal: %d\n", WSTOPSIG(wstatus));
@@ -78,17 +90,27 @@ int main(int argc, char** argv) {
             } else if (WIFSTOPPED(wstatus)) {
                 int stop_sig = WSTOPSIG(wstatus);
                 int event_code = wstatus>>8;
+                struct pstree* ps_parent;
+                unsigned long new_pid;
                 switch (event_code) {
                     case (SIGTRAP | (PTRACE_EVENT_CLONE<<8)):
                     case (SIGTRAP | (PTRACE_EVENT_FORK<<8)):
-                        unsigned long new_pid;
                         ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
                         printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
-                        struct pstree* ps_child = pstree_mknode(new_pid);
-                        struct pstree* ps_parent = pstree_find(ps_root, child_pid);
+                        ps_parent = pstree_find(ps_root, child_pid);
+                        struct pstree* ps_child = pstree_mknode(new_pid, strdup(ps_parent->exe_path));
                         pstree_insert_child(ps_parent, ps_child);
 
                         init_trace(new_pid);
+                        break;
+                    case (SIGTRAP | (PTRACE_EVENT_EXEC<<8)):
+                        unsigned long new_pid;
+                        ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
+                        // TODO: what if the exec fails? - I wouldn't want a new pstree entry in this case.
+                        printf("\033[1;33m[!]\033[0m Caught ptrace EXEC event! Continuing tracer on %lu\n", new_pid);
+                        struct pstree* ps_exec = pstree_mknode(new_pid, get_proc_path(new_pid));
+                        ps_parent = pstree_find(ps_root, child_pid);
+                        pstree_insert_exec(ps_parent, ps_exec);
                         break;
                 }
                 switch (stop_sig) {

@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <limits.h> // for PATH_MAX
+#include <signal.h>
 
 #include "sysnr_map.h" // map syscall numbers to their names
 #include "pstree.h" // Process tree info storage
@@ -58,14 +59,23 @@ char* get_proc_path(unsigned long pid) {
     return exe_path;
 }
 
+pid_t root_child_pid;
+
+void sigint_handler(int dummy) {
+    puts("\n\033[1;33m[!]\033[0m SIGINT on tracer\n");
+    kill(root_child_pid, SIGINT);
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         fputs("Please provide at least the path of the executable to trace!\n", stderr);
         return 1;
     }
 
+    signal(SIGINT, sigint_handler);
+
     printf("Going to trace: %s\n", argv[1]);
-    pid_t root_child_pid = fork();
+    root_child_pid = fork();
     if (root_child_pid == 0) {
         printf("Child requesting trace by the parent\n");
         ptrace(PTRACE_TRACEME, NULL, NULL, NULL);
@@ -83,10 +93,9 @@ int main(int argc, char** argv) {
             }
 
             if (WIFSIGNALED(wstatus)) {
-                // TODO: we might need to continue (forward signal) the process here for some signals
-                printf("We are stopping because of a signal: %d\n", WSTOPSIG(wstatus));
+                printf("\033[1;33m[!]\033[0m Child process %lu is stopping because of signal: %s\n", child_pid, strsignal(WTERMSIG(wstatus)));
             } else if (WIFEXITED(wstatus)) {
-                printf("Child process exited\n");
+                printf("\033[1;33m[!]\033[0m Child process %lu exited with status %d\n", child_pid, WEXITSTATUS(wstatus));
             } else if (WIFSTOPPED(wstatus)) {
                 int stop_sig = WSTOPSIG(wstatus);
                 int event_code = wstatus>>8;

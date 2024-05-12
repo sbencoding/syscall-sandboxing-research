@@ -6,6 +6,7 @@
 #include <string.h>
 #include <limits.h> // for PATH_MAX
 #include <signal.h>
+#include <fcntl.h>
 
 #include "sysnr_map.h" // map syscall numbers to their names
 #include "pstree.h" // Process tree info storage
@@ -77,6 +78,10 @@ int main(int argc, char** argv) {
     root_child_pid = fork();
     if (root_child_pid == 0) {
         silent_printf("Child requesting trace by the parent\n");
+        if (conf->is_tracee_silent) {
+            int black_hole = open("/dev/null", O_WRONLY);
+            dup2(black_hole, STDOUT_FILENO);
+        }
         ptrace(PTRACE_TRACEME, NULL, NULL, NULL);
         execve(conf->inferior_path, conf->inferior_args, NULL);
     } else {

@@ -4,6 +4,7 @@ This is the start of a simple tracer that aims to provide information about what
 ## Project structure
 * `tracer.c` - the main driving code for the tracer
 * `pstree.h` - contains the process tree data structure and functions to interact with it
+* `opt_handler.h` - contains logic to parse command line arguments into a configuration struct
 * `test_progs` - small programs for testing how the tracer works
 * `test_progs_out` - build results of the `test_progs` programs
 * `sysnr_mapping` - the mapping generator as well as generated mappings (c header files) are stored here

@@ -9,8 +9,10 @@
 
 #include "sysnr_map.h" // map syscall numbers to their names
 #include "pstree.h" // Process tree info storage
+#include "opt_handler.h" // Helper file to handle command line arguments
 
 #define VERBOSE_TRACE
+#define silent_printf(...) if (conf->is_silent == 0) printf(__VA_ARGS__)
 
 void init_trace(int child_pid) {
     // TODO: vfork
@@ -67,21 +69,18 @@ void sigint_handler(int dummy) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        fputs("Please provide at least the path of the executable to trace!\n", stderr);
-        return 1;
-    }
+    struct app_config* conf = handle_cmdline_opts(argc, argv);
 
     signal(SIGINT, sigint_handler);
 
-    printf("Going to trace: %s\n", argv[1]);
+    silent_printf("Going to trace: %s\n", conf->inferior_path);
     root_child_pid = fork();
     if (root_child_pid == 0) {
-        printf("Child requesting trace by the parent\n");
+        silent_printf("Child requesting trace by the parent\n");
         ptrace(PTRACE_TRACEME, NULL, NULL, NULL);
-        execve(argv[1], &argv[2], NULL);
+        execve(conf->inferior_path, conf->inferior_args, NULL);
     } else {
-        mk_banner("Starting up the tracer");
+        if (conf->is_silent == 0) mk_banner("Starting up the tracer");
         int wstatus;
         int child_pid;
         struct ptrace_syscall_info syscall_info;
@@ -93,9 +92,9 @@ int main(int argc, char** argv) {
             }
 
             if (WIFSIGNALED(wstatus)) {
-                printf("\033[1;33m[!]\033[0m Child process %lu is stopping because of signal: %s\n", child_pid, strsignal(WTERMSIG(wstatus)));
+                silent_printf("\033[1;33m[!]\033[0m Child process %lu is stopping because of signal: %s\n", child_pid, strsignal(WTERMSIG(wstatus)));
             } else if (WIFEXITED(wstatus)) {
-                printf("\033[1;33m[!]\033[0m Child process %lu exited with status %d\n", child_pid, WEXITSTATUS(wstatus));
+                silent_printf("\033[1;33m[!]\033[0m Child process %lu exited with status %d\n", child_pid, WEXITSTATUS(wstatus));
             } else if (WIFSTOPPED(wstatus)) {
                 int stop_sig = WSTOPSIG(wstatus);
                 int event_code = wstatus>>8;
@@ -105,7 +104,7 @@ int main(int argc, char** argv) {
                     case (SIGTRAP | (PTRACE_EVENT_CLONE<<8)):
                     case (SIGTRAP | (PTRACE_EVENT_FORK<<8)):
                         ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
-                        printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
+                        silent_printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         struct pstree* ps_child = pstree_mknode(new_pid, strdup(ps_parent->exe_path));
                         pstree_insert_child(ps_parent, ps_child);
@@ -116,7 +115,7 @@ int main(int argc, char** argv) {
                         unsigned long new_pid;
                         ptrace(PTRACE_GETEVENTMSG, child_pid, NULL, &new_pid);
                         // TODO: what if the exec fails? - I wouldn't want a new pstree entry in this case.
-                        printf("\033[1;33m[!]\033[0m Caught ptrace EXEC event! Continuing tracer on %lu\n", new_pid);
+                        silent_printf("\033[1;33m[!]\033[0m Caught ptrace EXEC event! Continuing tracer on %lu\n", new_pid);
                         struct pstree* ps_exec = pstree_mknode(new_pid, get_proc_path(new_pid));
                         ps_parent = pstree_find(ps_root, child_pid);
                         pstree_insert_exec(ps_parent, ps_exec);
@@ -140,15 +139,15 @@ int main(int argc, char** argv) {
                                 caller->syscall.syscall_nr = syscall_info.entry.nr;
                                 caller->syscall_usage[syscall_info.entry.nr]++;
 #else
-                                printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
+                                silent_printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
 #endif
                                 break;
                             case PTRACE_SYSCALL_INFO_EXIT:
 #ifdef VERBOSE_TRACE
                                 caller = pstree_find(ps_root, child_pid);
-                                printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx -> %ld\n", child_pid, sysnr_map[caller->syscall.syscall_nr], caller->syscall.syscall_nr, caller->syscall.ip, syscall_info.exit.rval);
+                                silent_printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx -> %ld\n", child_pid, sysnr_map[caller->syscall.syscall_nr], caller->syscall.syscall_nr, caller->syscall.ip, syscall_info.exit.rval);
 #else
-                                printf(" -> %ld\n", syscall_info.exit.rval);
+                                silent_printf(" -> %ld\n", syscall_info.exit.rval);
 #endif
                                 break;
                             case PTRACE_SYSCALL_INFO_SECCOMP:
@@ -161,28 +160,32 @@ int main(int argc, char** argv) {
                         ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
                         break;
                     default:
-                        printf("\033[1;33mWarning:\033[0m forwarding signal `%s` to process %lu\n", strsignal(stop_sig), child_pid);
+                        silent_printf("\033[1;33mWarning:\033[0m forwarding signal `%s` to process %lu\n", strsignal(stop_sig), child_pid);
                         ptrace(PTRACE_SYSCALL, child_pid, NULL, stop_sig);
                         break;
                 }
             }
         }
 
-        mk_banner("Recorded PS Tree");
-        pstree_print(ps_root, 0);
+        if (conf->is_silent == 0) {
+            mk_banner("Recorded PS Tree");
+            pstree_print(ps_root, 0);
 
-        mk_banner("Per process syscall stats");
-        pstree_foreach(ps_root, &ps_callback_syscall_stats);
+            mk_banner("Per process syscall stats");
+            pstree_foreach(ps_root, &ps_callback_syscall_stats);
 
-        mk_banner("Per process syscall flat list");
-        pstree_foreach(ps_root, &ps_callback_syscall_list);
+            mk_banner("Per process syscall flat list");
+            pstree_foreach(ps_root, &ps_callback_syscall_list);
 
-        mk_banner("Recorded total syscalls");
-        print_syscall_stats(syscall_usage);
+            mk_banner("Recorded total syscalls");
+            print_syscall_stats(syscall_usage);
 
-        mk_banner("Flat total syscall list");
+            mk_banner("Flat total syscall list");
+        }
+
         print_flat_syscall_list(syscall_usage);
 
         pstree_free(ps_root);
+        free(conf);
     }
 }

@@ -35,7 +35,7 @@ struct app_config* handle_cmdline_opts(int argc, char** argv) {
 
     if (optind < argc) {
         conf->inferior_path = argv[optind];
-        conf->inferior_args = &argv[optind+1];
+        conf->inferior_args = &argv[optind];
     } else {
         fputs("Error: missing path to executable to trace!\n", stderr);
         free(conf);

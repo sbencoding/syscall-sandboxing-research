@@ -1,6 +1,13 @@
 import subprocess
 import inspect
 
+def input_case(func):
+    func.position = input_case.idx
+    input_case.idx += 1
+    return func
+
+input_case.idx = 0
+
 class ProgAnalysis():
     def __init__(self, prog_path, opts=[]):
         self.prog_path = prog_path
@@ -27,10 +34,11 @@ class ProgAnalysis():
         print(self.prog_path)
         methods = []
         for k in dir(self):
-            if k.startswith('case_') and inspect.ismethod(getattr(self, k)):
-                methods.append((k, getattr(self, k)))
+            method = getattr(self, k)
+            if k.startswith('case_') and inspect.ismethod(method) and method.position is not None:
+                methods.append((k, method))
 
-        for k,v in methods:
+        for k,v in sorted(methods, key=lambda el: el[1].position):
             print('-', k)
             v()
             self.cases_ran += 1

@@ -41,5 +41,5 @@ This is the start of a simple tracer that aims to provide information about what
 For the following programs we should implement the runners and potentially extend the tracer to support them.
 Focus for now is on single phase execution, so one big syscall list per program.
 - [x] `ls`
-- [ ] `sqlite`
+- [x] `sqlite`
 - [ ] `redis`

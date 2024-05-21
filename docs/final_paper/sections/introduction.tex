@@ -1,27 +1,27 @@
 \section{Introduction}
-Operating systems allow applications to perform sensitive operations through the use of system calls. The idea of system call sanboxing is to restrict the available system calls for each application to the minimum required set in order to adhere to the principle of least privilege and reduce the potential attack surface in case the application has a vulnerability.
+Operating systems allow applications to perform sensitive operations through the use of system calls. The idea of system call sandboxing is to restrict the set of available system calls for each application to the minimum required set in order to adhere to the principle of least privilege and reduce the potential attack surface in case the application has a vulnerability.
 
-Existing work focuses on generating the required set of system calls automatically, through statically analyzing the call graph and control flow of the binary or performing compile-time analysis \cite{ref_sp_1} \cite{ref_sp_3} \cite{ref_sp_2}.
-Another approach that is taken is to dynamically analyze the application and obtain the set of used system calls that way \cite{ref_dyn_1}, but more commonly a general appoach of removing unused parts of the applications (debloating) is taken \cite{ref_debloat_1} \cite{ref_debloat_2}. % ref_sp_2 -> 75 (dyn); ref_mp_1 -> 21, 48 (debloat)
+Existing work focuses on generating the required set of system calls automatically, by statically analyzing the call graph and control flow of the binary \cite{ref_sp_3,ref_sp_2} or performing compile-time analysis \cite{ref_sp_1}.
+Another approach that is taken is to dynamically analyze the application \cite{ref_dyn_1} and obtain the set of used system calls that way. A similar and related topic in the area of attack surface reduction using dynamic analysis is removing unused parts of applications (debloating) \cite{ref_debloat_1,ref_debloat_2}. % ref_sp_2 -> 75 (dyn); ref_mp_1 -> 21, 48 (debloat)
 Overarching these approaches, some existing work tries to establish different phases of execution to generate a finer grained set of system calls to block per phase \cite{ref_mp_1}.
 
-While static analysis is able to generate accurate results it is often costly to perform \cite{ref_sp_1} and techniques can quickly become complicated as the size of the application scales.
-On the other hand dynamic analysis techniques tend to result in less accuracy \cite{ref_sp_3}, while being simpler to scale to larger applications.
+While static analysis is able to generate accurate results, with slight overapproximations \cite{ref_dyn_1}, it is often costly to perform \cite{ref_sp_1} and techniques can quickly become complicated as the size of the application scales.
+On the other hand dynamic analysis techniques tend to result in less accuracy and underapproximation \cite{ref_sp_3}, while being simpler to scale to larger applications.
 This raises a question about what exactly the trade-off is between these 2 different approaches in terms of runtime and accuracy, and when should one be preferred over the other.
 
-The aim of this work is to explore the difference between these 2 approaches and to report the runtime and accuracy of various different implementations relying on static analysis.
+The aim of this work is to explore the difference between these 2 approaches and to report the runtime and accuracy of various different implementations that rely on static analysis.
 More specifically this work poses the following 3 research questions:
 \begin{itemize}
-    \item{\textbf{RQ1:} How can we use dynamic analysis to gather a list of system calls for selected applications, so that they can be used as ground truth for comparing other static analysis based solutions?}
+    \item{\textbf{RQ1:} How can we use dynamic analysis to gather a list of system calls for selected applications, so that they can be used as a basis for comparing other static analysis based solutions?}
     \item{\textbf{RQ2:} How do different static analysis based solutions compare in terms of accuracy and runtime when considering applications that have a single execution phase?}
     \item{\textbf{RQ3:} How do different static analysis based solutions compare in terms of accuracy and runtime when considering applications that have multiple execution phases?}
 \end{itemize}
 
 The main contributions of this research are:
 \begin{itemize}
-    \item{A simple dynamic analysis implementation that generates a list of required system calls.}
+    \item{A simple dynamic analysis implementation that generates a list of required system calls for a given application.}
     \item{Analysis in terms of runtime and accuracy of some existing static analysis based solutions.}
-    \item{To conclude, a comparison between the dynamic and static analysis approach}
+    \item{To conclude, a comparison between the dynamic and static analysis approach.}
 \end{itemize}
 
 The following sections first give more background information on the topic, after which the simple dynamic analysis tool is introduced and discussed.

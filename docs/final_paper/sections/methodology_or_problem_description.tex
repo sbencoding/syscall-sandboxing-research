@@ -1,16 +1,16 @@
-\section{Methodology, Background, Problem Description}
-Choose one that fits your research best:
-\subsection{Methodology and/or background}
-Typically in general research articles, the second section contains a description of the research methodology, explaining what you, the researcher, is doing to answer the research question(s), and why you have chosen this method.
-For purely analytical work this is a description of the data collection or experimental setup on how to test the hypothesis, with a motivation.
+\section{Background and Related Work}
+System calls are the interface the kernel provides to applications to perform sensitive operations and interact with hardware devices. This mechanism allows for applications to exist in isolation while running simultaneously, and protects hardware components from malicious behavior to a certain extent. Normally an application is allowed to invoke any system call and so it has the privileges of the user who started the application.
 
-In any case this section includes references to necessary background information.
-For a survey paper this includes the method of how you arrived at the set of papers included in the survey.
+The principle of least privilege demands that every unit of execution is given the minimum amount of privileges that still allows it to fully function \cite{ref_plp_1}. This is ideal since in the case of a user error, an application bug or a vulnerability the potential damage is minimized without decreasing the usability of the given application. The regular flow of system calls thus does not adhere to this principle, since not every application needs access to every system call.
 
-\subsection{Formal Problem Description}
-For some types of work in computer science the methodology is standard: analyze the problem (e.g., make assumptions and derive properties), present a new algorithm and its theoretical background, proving its correctness, and evaluate unproven aspects in simulation.
-Then an explanation of the methodology is often omitted, and the setup of the evaluation is part of a later section on the evaluation of the ideas.\footnote{This already shows that there is no single outline to be given for all papers.}
-In this case, explain relevant (background) concepts, theory and models in this section (with references) and relate them to your research question.
-Also this section then typically contains a more precise, formal description of the problem.
+System call sandboxing gives the ability to disallow invoking certain system calls for a given application that are not going to be required. This ability allows applications to better adhere to the principle of least privilege, and thus can greatly reduce the attack surface available to potential attackers. However the configuration is a tedious, manual process that needs to be done on a per application basis and requires highly detailed understanding of the given program and its dependencies. This is a possible explanation for the low adoption rate of this technology in open source projects \cite{ref_adoption_1}.
 
-Do not forget to give this section another name, for example after the problem you are solving.
+Automating the system call policy generation process has been the focus of recent work in order to make system call sandboxing easier to use and to potentially increase the adoption of this technique. A variety of solutions have been proposed that can be split into 2 main categories, static and dynamic analysis. Both approaches aim to automatically discover the set of used system calls by analyzing the given program and its dependencies.
+
+Static analysis solutions \cite{ref_sp_1,ref_sp_3,ref_sp_2} inspect the source code or the binary of the given program without executing it, and identify the list of used system calls that way. This approach tends to slightly overestimate the set of required system calls \cite{ref_dyn_1}, while still leading to a considerable attack surface reduction. The main issue of static analysis is that it does not scale well as program size increases, resulting in longer analysis time and more complicated setup as the amount of dependencies grows.
+
+Dynamic analysis solutions \cite{ref_dyn_1} trace the given program while it is being executed and record the invoked system calls that way. This approach tends to underestimate the set of required system calls, unless the given program is extensively exercised during analysis to explore as many program states as possible that may invoke systems calls that have not been recorded previously. Thus the main issue of dynamic analysis is the reliance on a test suite which explores adequately many program states, however in return dynamic analysis is simpler to scale to larger applications.
+
+Temporal specialization \cite{ref_mp_1} is another novel technique that does not strictly fall into any of the 2 main categories. The core idea is to consider that applications tend to have multiple phases of execution that require their own set of system calls and achieve a more fine-grained policy. The model works well especially in the case of server applications, which tend to have a first phase that sets up the server and then a serving phase, responsible for handling clients.
+
+With many solutions tackling the challenge in various different ways the need for a study to compare them is motivated, and this is the gap that the research is aiming to address. In addition to comparing various proposed implementations and analyzing the underlying techniques, this study offers the chance to see how these tools fare 1-2 years after their release. Furthermore, a small program analysis tool based on dynamic analysis is provided for the sake of comparison with the seemingly more popular static analysis based techniques.

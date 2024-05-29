@@ -1,3 +1,27 @@
 \section{Responsible Research}
-Reflect on the ethical aspects of your research and discuss the reproducibility of your methods.
-Note that although in many published works there is no such a section (it may be part of some meta-information collected by the journal, or part of the discussion section), we require you to think (and report) about this as part of this course.
+%Reflect on the ethical aspects of your research and discuss the reproducibility of your methods.
+%Note that although in many published works there is no such a section (it may be part of some meta-information collected by the journal, or part of the discussion section), we require you to think (and report) about this as part of this course.
+Due to the topic of this research it is difficult to write about ethical aspects in the classical sense. No user data has been collected, no human subjects were interviewed during the research and the results likely do not directly impact any end users.
+Therefore it is more beneficial to consider the indirect impact on users and consider the ethical aspects through these lenses.
+
+The technologies discussed in the paper help with protecting software and thus protecting its users, but in some cases it can prevent software from functioning correctly.
+Thus the key aspects this section aims to cover are:
+\begin{itemize}
+    \item Ensure that the security guarantees of the presented technologies is clearly communicated, so to not create false expectations.
+    \item Ensure that potential limitations of the techniques are properly discussed and communicate when and how the protection techniques may prevent a given application from performing its functions properly.
+    \item Ensure that the results presented are acquired through a reproducible research experiment.
+\end{itemize}
+
+To make sure the paper does not set false expectations, first the underlying concepts of all the presented protection mechanisms are detailed in the Background and Related Work section.
+The section gives the reader a better understanding of how the techniques protect against potential attacks and how far these protections extend, and what types of vulnerabilities and attacks are not covered by them.
+Furthermore, for each approach the advantages and disadvantages are discussed, so the compromise between security and functionality is clear and this is corroborated by the results of the experiment.
+
+Naturally there is a chance that the tools discussed in the paper lead to certain functions of applications being restricted, which may even lead to the whole application becoming unusable.
+To this end the paper explains the drawbacks of the various approaches to solving the problem, underlining that in case dynamic analysis tools grossly underestimate the set of required system calls, the application can stop functioning. Furthermore it is important to highlight that most of these works are in their research phase and are not recommended to be deployed in production systems just yet.
+It is important that readers of this paper understand this risk, otherwise businesses and end users can be negatively impacted by the outage of a given service.
+
+Therefore it is important, due to the reasons outlined above, that readers of this paper are aware of how the experiment was conducted in order to have a precise understanding of how these technologies perform and what are their limitations.
+To this end the experiment setup section goes into great detail about how all the programs under test were setup, how the analysis tools were setup, what the test environment looked like.
+This is ensured by providing precise version information about each library and application that was used, and version information about the operating system, important packages and Linux kernel.
+The paper also describes what kind of information was measured during the experiment, and how this information was measured.
+In the end, following all steps precisely should lead to the same experimental results and should increase the confidence of the readers in the presented results.

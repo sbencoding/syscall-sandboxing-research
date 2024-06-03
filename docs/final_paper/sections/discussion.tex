@@ -9,7 +9,7 @@ It is difficult to come up with a comprehensive analysis suite, since the behavi
 
 In comparison static analysis tools block less system calls, and they potentially overestimate the set of required system calls, depending on how much information about the program is available and what techniques are used.
 However the Sourcealyzer part of Chestnut achieves a close number of blocked system calls to the dynamic analysis solution, demonstrating that the degree overestimation is minimal in some cases.
-On the other end of the spectrum, Binalyzer with \texit{syscalls.py} on dynamically linked binaries blocks significantly less calls than any other solution.
+On the other end of the spectrum, Binalyzer with \textit{syscalls.py} on dynamically linked binaries blocks significantly less calls than any other solution.
 
 Perhaps another positive note about dynamic analysis is that it is possible for the blocked set of system calls to be learned from actual usage of the program. If only a part of the built-in functionality of a program is used in a given system, it can be safer to block system calls related to the unused functions. This concept is not captured by purely static analysis based tools, which first slightly overapproximate the required set of system calls and then offer no solution to reduce the size of this set.
 

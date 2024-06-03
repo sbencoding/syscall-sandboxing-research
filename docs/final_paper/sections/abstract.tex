@@ -1,7 +1,11 @@
 \begin{abstract}
-The aim of this template is to make it more clear what is expected from you. 
-\textbf{It is by no means required to follow this exact same structure.}
-The abstract should be short and give the overall idea:
-what is the background, the research questions, what are your contributions, and what are the main conclusions.
-It should be readable as a stand-alone text (preferably no references to the paper or to outside literature).
+    System call sanboxing is the idea to restrict the set of system calls an application is able to invoke.
+    This reduces the attack surface available to an attack exploiting the binary, and adheres to the principle of least privilege, giving entities the minimum required permissions needed to perform their function.
+    The key goal is to automatically identify which system calls to block, since it is a complex task requiring great insight into the program and its dependencies.
+
+    This paper investigates and compares various solutions in this field by measuring their accuracy and analysis time. Furthermore a simple dynamic analysis based solution is created for the sake of comparision with the other static analysis based tools. The tools are evaluated on a small set of commonly used Linux applications, and the results are reported.
+
+    The research shows that although dynamic analysis underapproximates the set of required system calls it still has its unique advantage of adapting to a custom usage profile.
+
+    Similarly although static analysis takes a longer time and is more complicated, the results show that modern techniques overcome these difficulties, and that precomputing results and using multiple threads can greatly reduce the runtime of the analysis.
 \end{abstract}

@@ -29,6 +29,12 @@ class ProgAnalysis():
     def exec_with_args(self, args):
         proc = subprocess.Popen(["./tracer", "-m", *self.opts, '--', self.prog_path, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return self._process_proc_output(proc)
+    
+    def exec_with_external(self, ext_prog, ext_args):
+        proc = subprocess.Popen(["./tracer", "-m", *self.opts, '--', self.prog_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ext_proc = subprocess.Popen([ext_prog, *ext_args])
+        ext_proc.wait()
+        return self._process_proc_output(proc)
 
     def run_all_cases(self):
         print(self.prog_path)

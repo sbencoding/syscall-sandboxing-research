@@ -1,6 +1,41 @@
 \section{Discussion}
-Results can be compared to known results and placed in a broader context.
-Provide a reflection on what has been concluded and how this was done.
-Then give a further possible explanation of results.
+This section explores the results stated in the previous section and attempts to find explanations or new connections between topics. Since there are multiple angles to discuss the results from the section has been split up to multiple subsections.
 
-You may give this section another name, or merge it with the one before or the one hereafter.
+\subsection {System call sets}
+When looking at the results it is evident that the dynamic analysis solution developed for this research blocks the largest amount of system calls.
+However it is important to mention that this result is only as strong as the analysis cases that are exercising the program under test, and therefore it is possible that some execution path is missed.
+This leads to underestimating the set of required system calls, and if these system calls were truly blocked it might stop the applications from working under certain conditions that were not explored during testing.
+It is difficult to come up with a comprehensive analysis suite, since the behavior depends not only on the inputs to the program but also on the state of the system as a whole.
+
+In comparison static analysis tools block less system calls, and they potentially overestimate the set of required system calls, depending on how much information about the program is available and what techniques are used.
+However the Sourcealyzer part of Chestnut achieves a close number of blocked system calls to the dynamic analysis solution, demonstrating that the degree overestimation is minimal in some cases.
+On the other end of the spectrum, Binalyzer with \texit{syscalls.py} on dynamically linked binaries blocks significantly less calls than any other solution.
+
+Perhaps another positive note about dynamic analysis is that it is possible for the blocked set of system calls to be learned from actual usage of the program. If only a part of the built-in functionality of a program is used in a given system, it can be safer to block system calls related to the unused functions. This concept is not captured by purely static analysis based tools, which first slightly overapproximate the required set of system calls and then offer no solution to reduce the size of this set.
+
+\subsection {Analysis time}
+From the aspect of analysis time it can be seen that the dynamic analysis solution takes the least amount of time, therefore it leaves room for more analysis cases to be added, until the analysis time approaches that of the static analysis tools.
+
+The second fastest solution is confine with 1-2 seconds spent per program on average. This is because confine contains a pre-computed call graph for certain libc versions, and thus skips the steps where most analysis tools spend their time, analyzing what systems calls the libc functions make that are used by the given program. Therefore a promising technique to speed up analysis could be precomputing results for popular libraries and dependencies.
+
+The next fastest solution is perhaps surprisingly the Sourcealyzer part of Chestnut, with 1-4 seconds of analysis time per program. Although this may be unexpected a first, a significant speedup is achieved by utilizing multiple cores. Since the Sourcalyzer is implemented as an LLVM pass it has the same parallelization options as other compiler tasks, and thus allowing 16 concurrent jobs while testing greatly favors solutions which take advantage of multiple cores. In comparison, all of the other solutions relied on single core execution, therefore another opportunity to increase analysis speeds is to utilize multiple cores.
+
+Perhaps the slowest solution is the Binalyzer part of Chestnut, specifically using the \textit{cfg.py} script.
+This demonstrates the CFG construction is a time consuming task, and also nicely demonstrates that as program size scales up from \textit{ls} to redis, execution time also increases from 11 seconds to 1 minute. This further highlights the benefit that static analysis solutions aim to find faster, but potentially less accurate ways to find out which functions are called, and which system calls are connected to those functions.
+
+\subsection {Setup \& Usability}
+Although the above detailed metrics are of most importance, the adoption of these technologies depends on how easy they are to setup and use. Additionally it might influence the choice of which tool to use when try to select one. For example an analysis time of 10 seconds compared to 4 seconds is not a big problem, when the latter tool takes days to setup and the former is up and running in minutes.
+
+The dynamic analysis solution contains very little code and is relatively simple, it is easy to compile and run. The analysis cases are easily expandable, however it requires a great deal of effort to come up with an analysis suite that adequately covers the program space. Additionally, in the general case the downsides from breaking application functionality might be greater than the downside of a potential vulnerability from a low risk unblocked system call that a static analysis solution may not block.
+
+In the case of sysfilter the setup is relatively easy and the analysis software worked well on the tested binaries. A potential problem here is the distribution or package versions used, as running the program on ubuntu 16.04 leads to the analysis tool crashing during various stages of analysis for the different programs that were tested.
+
+For Confine the setup is similarly easy and the analysis software worked well, and although on my system there were problems with \textit{sysdig}, luckily other monitoring tool options were also supported.
+Here a potential problem is with containers that are not long running, and exit within 60 seconds of starting. The analysis tool is designed for long running containers and I have not managed to successfully analyze a simple container that exits almost immediately after starting.
+
+In the case of chestnut, the setup is pretty cumbersome, as no guide or detailed instructions are available on how to setup a system to work with chestnut.
+Patching and compiling a specific LLVM version is a lot more time consuming than other alternatives, and is more difficult to adapt as time moves on to other compilers and libraries.
+The requirement to compile each dependency with the patched compiler further increases the invested time and effort, and is especially problematic for project which do not compile well on LLVM.
+Additionally the final binary needs to be statically compiled for a list of used system calls to be generated, which is further restrictive.
+In the end, although I have managed to extract the filtered system calls, I did not manage to run any binary compiled in such a way, due to a crash early in the loading process.
+Although it is entirely possible that there is something wrong with the setup, it also highlights the problem of missing instructions when trying to configure such a complicated analysis system.

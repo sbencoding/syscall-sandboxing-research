@@ -1,4 +1,5 @@
 tracer
+static_tracer
 test_progs_out/*
 docs/final_paper/latex_out/*
 __pycache__/

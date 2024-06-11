@@ -1,5 +1,11 @@
 \section{Conclusions and Future Work}
-In conclusion this research explored the area of System call sandboxing, comparing various implementations in the area. The compare the approaches an experiment was set up and carried out, after which the results such as accuracy and runtime were collected. To finalize the research reflects upon the results aiming to answer the research questions it set out to investigate.
+\label{sec:conclusion}
+In the end there is no obvious winner between static and dynamic analysis.
+As the research shows, both approaches have their own advantages and drawbacks in terms of accuracy, runtime and ease of use.
+While static analysis slightly overapproximates, techniques using more information about the program reduce this problem, and analysis times can also be reduced by compromising a bit on accuracy.
+And although dynamic analysis usually underapproximates, sometimes this effect may be beneficial and should not be overlooked.
+
+To summarize, this research explored the area of system call sandboxing, comparing various implementations in the area. To compare the approaches, an experiment was set up and carried out, after which the results such as accuracy and runtime were collected. To finalize the research reflects upon the results aiming to answer the research questions it set out to investigate.
 
 A dynamic analysis based implementation was proposed in order to evaluate how well a purely dynamic analysis based solution would perform, since this approach is less popular in the field.
 The results show that such an approach is faster compared to other solutions, and blocks more system calls, although at the cost of accuracy.
@@ -12,14 +18,9 @@ The research discusses the potentials to speed up analysis time and looks at the
 A key problem of these tools is the difficulty to setup and maintain, such as switching distribution or upgrading a compiler or library.
 A strong positive of these tools is that they are able to generate a relatively precise set of system calls to filter, independent of the given application.
 
-In the end there is no obvious winner between static and dynamic analysis.
-As the research explores both approaches have their own advantages and drawbacks in terms of accuracy, runtime and ease of use.
-While static analysis slightly overapproximates, techniques using more information about the program reduce this problem, and analysis times can also be reduced by compromising a bit on accuracy.
-And although dynamic analysis usually underapproximates, sometimes this effect may be beneficial and should not be overlooked.
-
 It is possible to perform more research in this area by improving techniques based on this research.
 Based on the results, approaches which precompute and cache call graphs and other results for commonly used libraries tend to spend less time analysing, such as in the case of Confine or chestnut.
 Furthermore, the research shows that incorporating all CPU cores to do the analysis can be beneficial in reducing analysis times.
 
-Additionally this research did not focus on whether the programs remain functional after applying the given filters, due to lack of time.
+Additionally, this research did not focus on whether the programs remain functional after applying the given filters, due to lack of time.
 However to increase confidence in these solutions, and to find potential problems in the various techniques it would be important to investigate this aspect as well.

@@ -1,23 +1,76 @@
 \section{Results}
+\label{sec:results}
 This section details the results of the experiment, which was set up as described by the previous section.
 The purpose of this section is to state how each tool performed and discussion of the results is deferred to the next section.
 The reported metrics are the analysis time and the number of blocked system calls.
 
 \subsection {Dynamic analysis solution}
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for the dynamic analysis solution implemented for this research}
+\label{tbl:dyn_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls & 345 & 104ms \\ 
+ \hline
+ sqlite & 341 & 344ms \\ 
+ \hline
+ redis & 346 & 335ms \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
 The dynamic analysis based tracer, written for this research is quick, however it blocks many system calls.
 The analysis for \textit{ls} took around 100ms for executing 8 cases and gathering all results.
-Out of the 373 system calls available on the host system it blocks 345, blocking system calls frequently used in attacks such as \textit{mprotect} and \textit{execve}.
+Out of the 373 system calls available on the host system it blocks 345, as depicted in Table \ref{tbl:dyn_results}, blocking system calls frequently used in attacks such as \textit{mprotect} and \textit{execve}.
 
 For sqlite and redis the performance is similar, in the 300-400 ms range, blocking 341 and 346 system calls respectively. Just like in the case for \textit{ls}, system calls frequently used when exploiting binaries have been blocked, however due to the nature of the applications the \textit{read} and \textit{write} system calls still allow for some data oriented attacks.
 
 \subsection {sysfilter}
-The analysis for \textit{ls} took around 12 seconds, identifying 293 system calls to be blocked.
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for sysfilter}
+\label{tbl:sysfilter_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls & 293 & 12.4s \\ 
+ \hline
+ sqlite & 269 & 17.35s \\ 
+ \hline
+ redis & 275 & 13.06s \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+The analysis for \textit{ls} took around 12 seconds, identifying 293 system calls to be blocked, as depicted in Table \ref{tbl:sysfilter_results}.
 Analysis of sqlite took slightly more time with 17 seconds and managed to block 269 system calls.
 For redis the analysis finished a bit faster with 13 seconds, blocking 275 system calls.
 
 \subsection {Confine}
-\textit{ls} was analysed in around 1.3 seconds, identifying 201 system calls to be blocked.
-Analisys for sqlite took slightly longer, with 2.1 seconds, resulting in 188 system calls to be blocked.
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for Confine}
+\label{tbl:confine_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls & 201 & 1.38s \\ 
+ \hline
+ sqlite & 188 & 2.21s \\ 
+ \hline
+ redis & 189 & 1.54s \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+\textit{ls} was analysed in around 1.3 seconds, identifying 201 system calls to be blocked, as shown in Table \ref{tbl:confine_results}.
+Analysis for sqlite took slightly longer, with 2.2 seconds, resulting in 188 system calls to be blocked.
 With redis the analysis took a bit less time with 1.5 seconds, and 189 system calls were blocked.
 
 \subsection {Chestnut}
@@ -25,23 +78,86 @@ The following section details the results for the Chestnut project.
 Since it has multiple components and the usage of statically linked binaries compared to dynamically linked binaries makes a significant difference in some results, more subsections are suitable for this project.
 
 \subsubsection {Sourcealyzer}
-Sourcealyzer produces 318 blocked system calls in around 4.5 seconds, when compiling \textit{ls}.
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for chestnut (Sourcealyzer)}
+\label{tbl:chestnut_src_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls & 318 & 4.53s \\ 
+ \hline
+ sqlite & 296 & 1.67s \\ 
+ \hline
+ redis & 286 & 4.54s \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+Sourcealyzer produces 318 blocked system calls in around 4.5 seconds, when compiling \textit{ls}, as Table \ref{tbl:chestnut_src_results}.
 For sqlite the analysis time drops to around 1.7 seconds, and 296 system calls are blocked as a result.
 Redis took around 4.5 seconds to analyze, after which 286 system calls got blocked.
 
 \subsubsection {Binalyzer - syscalls}
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - syscalls)}
+\label{tbl:chestnut_bin_sys_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls (dynamic) & 93 & 6.37s \\ 
+ \hline
+ ls (static) & 319 & 951ms \\ 
+ \hline
+ sqlite (dynamic) & 99 & 10.768s \\ 
+ \hline
+ sqlite (static) & 298 & 3.01s \\ 
+ \hline
+ redis (dynamic) & 99 & 9.49s \\ 
+ \hline
+ redis (static) & 292 & 3.05s \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
 In this subsection binaries were analyzed using the \textit{syscalls.py} script.
-For the dynamically linked \textit{ls} the analysis took 6.7 seconds and blocked only 93 system calls, in comparison the same analysis on the statically linked binary took 900 ms, but managed to block 319 system calls.
+For the dynamically linked \textit{ls} the analysis took 6.7 seconds and blocked only 93 system calls, in comparison the same analysis on the statically linked binary took 900 ms, but managed to block 319 system calls, as Table \ref{tbl:chestnut_bin_sys_results} depicts.
 
 A similar trend between the static and dynamic linkage can be observed with the other 2 programs, with the dynamic sqlite binary taking 10 seconds to analyze and blocking 99 system calls and the static version taking only 3 seconds, and blocking 298 system calls.
 
 Redis took 9 seconds to analyze using the dynamic version, but only 3 seconds when using the static version. 99 and 292 systems calls got blocked respectively.
 
 \subsubsection {Binalyzer - cfg}
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - cfg)}
+\label{tbl:chestnut_bin_cfg_results}
+\begin{tabular}{||c c c||} 
+ \hline
+ Program & Blocked system call count & Runtime \\
+ \hline\hline
+ ls (dynamic) & - & 5.52s \\ 
+ \hline
+ ls (static) & 318 & 11.88s \\ 
+ \hline
+ sqlite (dynamic) & - & 1.43s \\ 
+ \hline
+ sqlite (static) & 297 & 40.22s \\ 
+ \hline
+ redis (dynamic) & - & 53.3s \\ 
+ \hline
+ redis (static) & 292 & 60.52s \\ 
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
 In this subsection binaries were analyzed using the \textit{cfg.py} script.
 For all 3 programs the analysis of the dynamically linked libraries did not yield any blocked system calls, with \textit{ls} taking 5 seconds to analyze and redis taking 53 seconds. Additionally for sqlite the analysis fails 1.4 seconds, due to \textit{angr} not being able to construct the CFG.
 
 For the statically linked binaries the performance is better.
-\textit{ls} took 11.8 seconds to analyze and 318 system calls got blocked.
-For sqlite the analysis took 40.5 seconds and blocked 297 system calls.
+\textit{ls} took 11.8 seconds to analyze and 318 system calls got blocked, as shown in Table \ref{tbl:chestnut_bin_cfg_results}.
+For sqlite the analysis took 40.2 seconds and blocked 297 system calls.
 In the case of redis the analysis finished in 1 minute and blocked 292 system calls.

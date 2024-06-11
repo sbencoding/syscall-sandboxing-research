@@ -1,7 +1,8 @@
 \section{Experiment setup}
-During the experiment I have configured 4 analysis tools and made them inspect 3 separate programs.
+\label{sec:setup}
+During the experiment 4 analysis tools were configured and 3 separate programs were inspect.
 The environment for the experiment was a Docker container based on the \textit{ubuntu:18.04} image.
-Due to how Docker works the kernel is that of the host machine, which can be identified by: \textit{6.9.1-arch1-1}.
+The kernel is that of the host machine, which can be identified by: \textit{6.9.1-arch1-1}.
 The test computer had 16GB of RAM and an \textit{AMD Ryzen 7 4800H} 8 core CPU.
 The analysis timing information was collected by the \textit{time} command, except for one case, which is specifically stated below. More information about what steps of the process got timed for each of the tools can be found below.
 
@@ -9,48 +10,46 @@ The 3 programs under analysis are listed below:
 \begin{itemize}
     \item {\textbf{ls} - was chosen since it is a simple, frequently used program. It is part of the bigger \textit{coreutils} package, of which version 8.28 was used.}
     \item {\textbf{sqlite} - was chosen since it is a commonly used application database. It is more complicated than \textit{ls} and therefore invokes more system calls. Version 3.22 was used.}
-    \item {\textbf{redis-server} - was chosen to test a larger server application. Since it is a server application it also deals with sockets, unlike the previous 2 applications. Version 4.0.9 was used.}
+    \item {\textbf{redis-server} - was chosen to test a larger server application. Since it is a server application it also deals with sockets, unlike the previous 2 applications. Version 4.0.9 was used with the default configuration.}
 \end{itemize}
 
+The \textit{Dockerfile} for setting up the analysis tools, and patches made to the projects (where applicable) can be all found on the project's source code repository.
+
 \subsection {Dynamic analysis solution}
-I have written a simple tracer to test out and report the results of a purely dynamic analysis based solution.
+A simple tracer was designed by the author to test out and report the results of a purely dynamic analysis based solution.
 The tracer is based on the \textit{ptrace} system call and requires a Linux kernel version of at least 5.3 to function, since it relies on the \textit{PTRACE\_GET\_SYSCALL\_INFO} operation.
 
-Since dynamic analysis requires the program under test to be exercised in order to explore as many program states as possible, I have also included a simple framework and scripts to provide input to and gather the results from the analysed programs. In the case of ls and sqlite the input cases are manually determined, while in the case of redis I have made use of the \textit{redis-benchmark} utility included with the redis-server package.
+Since dynamic analysis requires the program under test to be exercised in order to explore as many program states as possible, a simple framework and scripts to provide input to and gather the results from the analysed programs is also included. In the case of \textit{ls} and sqlite the input cases are manually determined, while in the case of redis the \textit{redis-benchmark} utility included with the redis-server package was used, with the \textit{-n 10} option.
 
 The timing information includes running the simple framework, executing all the defined analysis cases, gathering and printing all results.
 
-The source code for the tracer, as well as for the test framework is available in the project's source code repository.
+The source code for the tracer, as well as for the test framework with the test cases used is available in the project's source code repository.
 
 \subsection {sysfilter}
-The sysfilter \cite{ref_sp_3} analysis program was setup inside the docker container using the instructions given by the authors.
+The sysfilter \cite{ref_sp_3} analysis program, which relies mainly on static analysis, was setup inside the docker container using the instructions given by the authors.
 After the project is built, the programs under analysis were ran through the compiled binary, and the results were gathered.
 
 The timing information includes only the runtime of the analysis program, which also prints the results.
 
-The docker container setup is available on the project's source cod repository.
-
 \subsection {Confine}
-The Confine \cite{ref_sp_2} analysis program, was ran on the host machine, outside of a docker container, since the tool itself is going to spawn containers where the programs under test are ran.
-I analysed 3 docker containers one by one each based on the \textit{ubuntu:18.04} image and running one of the programs under analysis.
-Furthermore to make an adequate comparison between the analysis tools I have modified the source code to include include the syscalls from the program I was testing and its dependencies, as opposed to all programs the container runs.
-It also needs to be mentioned that \textit{sysdig}, a monitoring tool Confine relies crash on my host system when launching a docker container therefore I have used \textit{execsnoop} as a \textit{monitoringtool}.
+The Confine \cite{ref_sp_2} analysis program, which relies mainly on static analysis, was ran on the host machine, outside of a docker container, since the tool itself is going to spawn containers, where the programs under test are ran.
+3 docker containers were analysed, one by one, each based on the \textit{ubuntu:18.04} image and running one of the programs under analysis.
+Furthermore to make an adequate comparison between the analysis tools the author has modified the source code to include include the syscalls from the program that was being tested and its dependencies, as opposed to all programs the container runs.
+It also needs to be mentioned that \textit{sysdig}, a monitoring tool Confine relies on, crashed on the host system when launching a docker container therefore \textit{execsnoop} was used as a \textit{monitoringtool}.
 
 In addition to the instructions of the authors on running the tool, the above mentioned \textit{monitoringtool} options was used, as well as \textit{-d} to get debug output.
 The input JSON file that defines which containers to test was a simple file containing only the container which ran a given program under analysis.
 
 The timing information collected includes the time to analyze extracted binaries and dependencies and to generate a list of used system calls. This specifically excludes the time to run the container and extract the binaries and dependencies from it, in order to make a better comparison to the other tools. The time was measured using the \textit{time.time\_ns()} python function.
 
-The patch to the Confine project as well as an example \textit{Dockerfile} is provided in the project's source code repository.
-
 \subsection {Chestnut}
-The Chestnut \cite{ref_sp_1} project was built and ran inside the docker container. The \textit{Binalyzer} part got patched by Petr Khartskhaev, to solve an issue where the \textit{syscalls.py} script did not work.
-The experiment evaluates both \textit{syscalls.py} and \textit{cfg.py} on the binaries included with the distribution, as well as the statically built binaries, which are generated by the patched clang compiler explained below.
+The Chestnut \cite{ref_sp_1} project, which relies mainly on static analysis, was built and ran inside the docker container. The \textit{Binalyzer} part got patched by Petr Khartskhaev, to solve an issue where the \textit{syscalls.py} script did not work.
+The experiment evaluates both \textit{syscalls.py} and \textit{cfg.py} on the binaries included with the Ubuntu distribution, as well as the statically built binaries, which are generated by the patched clang compiler explained below.
 
-Furthermore I have made some modification to the \textit{Sourcealyzer} part of the project. First, the LLVM download and patch script was modified to apply the patch without user interaction and to also build clang and ldd.
-Next, the number of concurrent build jobs were also reduced to 10, since the build process ran into out of memory issues on my computer.
+Furthermore the author has made some modifications to the \textit{Sourcealyzer} part of the project. First, the LLVM download and patch script was modified to apply the patch without user interaction and to also build clang and ldd.
+Next, the number of concurrent build jobs were also reduced to 10, since the build process ran into out of memory issues on the computer performing the build.
 
-Afterwards \textit{musl} was setup (commit hash 007997299248b8682dcbb73595c53dfe86071c83), since all dependencies of programs under test need to be rebuilt using a new compiler flag, and building \textit{glibc} using the patched clang compiler did not work.
+Afterwards \textit{musl} was setup (commit hash 007997299248b8682dcbb73595c53dfe86071c83), since all dependencies of programs under test need to be rebuilt using a new compiler flag, and building \textit{glibc} using the patched clang compiler did not work due to some missing GNU extensions.
 Then the \textit{musl-clang} wrapper is modified to use the patched linker, instead of the system default, this is required for the intended program analysis to be done.
 
 Next libseccomp is rebuilt (commit hash 9da5d174e3ef219baab020a79c789f2075ace45c) against \textit{musl}, because a chestnut object, that needs to be built into the final analyzed program, depends on it, however the final analyzed program is not built against \textit{glibc} like the installed libseccomp-dev package is.
@@ -59,5 +58,3 @@ In the following step the aforementioned chestnut object is rebuilt against the 
 From here the programs under analysis need to be rebuilt, with the \textit{-static -lseccomp -fautosandbox} compiler flags, for the tool to perform analysis and include the used system calls in the resulting binaries.
 
 Timing information for \textit{Sourcalyzer} includes the time to clean build the programs under analysis, using 16 concurrent \textit{make} jobs where applicable. For \textit{Binalyzer} it includes running the given analysis script from start to completion.
-
-All docker setup commands, and the build instructions for the programs under analysis are available in the project's source code repository.

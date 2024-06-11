@@ -1,11 +1,10 @@
 \begin{abstract}
-    System call sanboxing is the idea to restrict the set of system calls an application is able to invoke.
+    System call sandboxing is the idea to restrict the set of system calls an application is able to invoke.
     This reduces the attack surface available to an attack exploiting the binary, and adheres to the principle of least privilege, giving entities the minimum required permissions needed to perform their function.
     The key goal is to automatically identify which system calls to block, since it is a complex task requiring great insight into the program and its dependencies.
 
-    This paper investigates and compares various solutions in this field by measuring their accuracy and analysis time. Furthermore a simple dynamic analysis based solution is created for the sake of comparision with the other static analysis based tools. The tools are evaluated on a small set of commonly used Linux applications, and the results are reported.
+    This paper investigates and compares various static analysis based solutions in this field, such as sysfilter \cite{ref_sp_3}, Confine \cite{ref_sp_2} and Chestnut \cite{ref_sp_1}, by measuring their accuracy and analysis time. Furthermore a simple dynamic analysis based solution is created for the sake of comparison with the previously mentioned tools. The tools are evaluated on a small set of commonly used Linux applications, such as \textit{ls}, \textit{sqlite} and \textit{Redis}, and the results are reported.
 
-    The research shows that although dynamic analysis underapproximates the set of required system calls it still has its unique advantage of adapting to a custom usage profile.
-
-    Similarly although static analysis takes a longer time and is more complicated, the results show that modern techniques overcome these difficulties, and that precomputing results and using multiple threads can greatly reduce the runtime of the analysis.
+    The research shows that although dynamic analysis underapproximates the set of required system calls it can adapt to a custom usage profile.
+    Additionally, although static analysis is slower and more complex, the research explores areas of improvement such as precomputing or multiple threads.
 \end{abstract}

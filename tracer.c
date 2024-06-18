@@ -54,12 +54,27 @@ void ps_callback_syscall_stats(struct pstree* node) {
 
 int syscall_usage[N_SYSCALLS] = {};
 char cur_proc_exe_link[PATH_MAX];
+char cur_proc_maps_link[PATH_MAX];
 
 char* get_proc_path(unsigned long pid) {
     snprintf(cur_proc_exe_link, PATH_MAX, "/proc/%lu/exe", pid);
     char* exe_path = (char*) malloc(PATH_MAX * sizeof(char));
     readlink(cur_proc_exe_link, exe_path, PATH_MAX * sizeof(char));
     return exe_path;
+}
+
+unsigned long get_proc_base_addr(unsigned long pid) {
+    snprintf(cur_proc_maps_link, PATH_MAX, "/proc/%lu/maps", pid);
+    FILE* map_file = fopen(cur_proc_maps_link, "r");
+    char base_addr_buf[20] = {};
+    fread(base_addr_buf, 20, 1, map_file);
+    base_addr_buf[19] = '\0';
+
+    unsigned long base_address = 0;
+    sscanf(base_addr_buf, "%llx-", &base_address);
+
+    fclose(map_file);
+    return base_address;
 }
 
 pid_t root_child_pid;
@@ -94,6 +109,7 @@ int main(int argc, char** argv) {
         while ((child_pid = waitpid(-1, &wstatus, 0)) != -1) {
             if (ps_root->exe_path == NULL) {
                 ps_root->exe_path = get_proc_path(ps_root->pid);
+                ps_root->base_addr = get_proc_base_addr(ps_root->pid);
             }
 
             if (WIFSIGNALED(wstatus)) {
@@ -112,6 +128,7 @@ int main(int argc, char** argv) {
                         silent_printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         struct pstree* ps_child = pstree_mknode(new_pid, strdup(ps_parent->exe_path));
+                        ps_child->base_addr = ps_parent->base_addr;
                         pstree_insert_child(ps_parent, ps_child);
 
                         init_trace(new_pid);
@@ -122,6 +139,7 @@ int main(int argc, char** argv) {
                         // TODO: what if the exec fails? - I wouldn't want a new pstree entry in this case.
                         silent_printf("\033[1;33m[!]\033[0m Caught ptrace EXEC event! Continuing tracer on %lu\n", new_pid);
                         struct pstree* ps_exec = pstree_mknode(new_pid, get_proc_path(new_pid));
+                        ps_exec->base_addr = get_proc_base_addr(new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         pstree_insert_exec(ps_parent, ps_exec);
                         break;

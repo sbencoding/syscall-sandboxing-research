@@ -10,6 +10,7 @@ struct ps_syscall_info {
 
 struct pstree {
     unsigned long pid;
+    unsigned long base_addr;
     char* exe_path;
     struct pstree* child;
     struct pstree* sibling;
@@ -24,6 +25,7 @@ struct pstree* pstree_mknode(const unsigned long pid, char* exe_path) {
     struct pstree* node = (struct pstree*)malloc(sizeof(struct pstree));
     node->pid = pid;
     node->exe_path = exe_path;
+    node->base_addr = 0;
     return node;
 }
 
@@ -51,7 +53,7 @@ void pstree_free(struct pstree* root) {
 
 void pstree_print(struct pstree* root, int ident) {
     for (int i = 0; i < ident; ++i) putchar('-');
-    printf("%lu (%s)\n", root->pid, root->exe_path);
+    printf("%lu (%s) @ 0x%llx\n", root->pid, root->exe_path, root->base_addr);
     if (root->child) pstree_print(root->child, ident + 2);
     if (root->sibling) pstree_print(root->sibling, ident);
     if (root->exec) {

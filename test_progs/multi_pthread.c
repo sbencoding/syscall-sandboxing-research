@@ -2,12 +2,14 @@
 #include <unistd.h>
 #include <pthread.h>
 
-void thread1() {
+void* thread1() {
     printf("thread 1\n");
+    return NULL;
 }
 
-void thread2() {
+void* thread2() {
     printf("thread 2222\n");
+    return NULL;
 }
 
 int main() {

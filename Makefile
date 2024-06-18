@@ -11,7 +11,7 @@ tracer: tracer.c
 static_tracer: tracer.c
 	cc -static -Isysnr_mapping tracer.c -o static_tracer
 
-test_progs: $(TEST_PROGS) ; $(info $$TEST_PROGS is [${TEST_PROGS}])
+test_progs: $(TEST_PROGS)
 
 $(TEST_PROGS): test_progs_out/% : test_progs/%.c
 	cc $< -o $@

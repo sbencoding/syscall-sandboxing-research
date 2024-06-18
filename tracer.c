@@ -3,6 +3,7 @@
 #include <sys/ptrace.h>
 #include <linux/ptrace.h> // glibc doesn't necessarily expose the ptrace_syscall_info struct
 #include <sys/wait.h>
+#include <sys/user.h> // for user_reg_struct
 #include <string.h>
 #include <limits.h> // for PATH_MAX
 #include <signal.h>
@@ -15,14 +16,47 @@
 #define VERBOSE_TRACE
 #define silent_printf(...) if (conf->is_silent == 0) printf(__VA_ARGS__)
 
-void init_trace(int child_pid) {
-    // TODO: vfork
-    ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEEXEC);
-    ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
+pid_t root_child_pid;
+
+unsigned long get_proc_base_addr(unsigned long pid) {
+    char cur_proc_maps[PATH_MAX];
+    snprintf(cur_proc_maps, PATH_MAX, "/proc/%lu/maps", pid);
+    FILE* map_file = fopen(cur_proc_maps, "r");
+    char base_addr_buf[20] = {};
+    fread(base_addr_buf, 20, 1, map_file);
+    base_addr_buf[19] = '\0';
+
+    unsigned long base_address = 0;
+    sscanf(base_addr_buf, "%llx-", &base_address);
+
+    fclose(map_file);
+    return base_address;
 }
 
 void mk_banner(const char* banner_text) {
     printf("\n\033[1;35m====================%s====================\033[0m\n\n", banner_text);
+}
+
+unsigned long breakpoint_original_data[MAX_PHASE_COUNT];
+
+void init_trace(int child_pid, struct app_config* conf) {
+    if (child_pid == root_child_pid && conf->phase_count != 0) {
+        mk_banner("Multi-phase setup");
+        unsigned long base_addr = get_proc_base_addr(child_pid);
+        silent_printf("Process base address is @ 0x%lx\n", base_addr);
+        for (int i = 0; i < conf->phase_count; ++i) {
+            unsigned long phase_addr = base_addr + conf->phase_addr[i];
+            conf->phase_addr[i] = phase_addr;
+            silent_printf("Setting breakpoint at address 0x%lx\n", phase_addr);
+            breakpoint_original_data[i] = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)phase_addr, NULL);
+            ptrace(PTRACE_POKETEXT, child_pid, (void*)phase_addr, 0xcc);
+        }
+
+        silent_printf("\n");
+    }
+    // TODO: vfork
+    ptrace(PTRACE_SETOPTIONS, child_pid, NULL, PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE | PTRACE_O_TRACEFORK | PTRACE_O_TRACEEXEC);
+    ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
 }
 
 void print_syscall_stats(int* usage_array) {
@@ -54,7 +88,6 @@ void ps_callback_syscall_stats(struct pstree* node) {
 
 int syscall_usage[N_SYSCALLS] = {};
 char cur_proc_exe_link[PATH_MAX];
-char cur_proc_maps_link[PATH_MAX];
 
 char* get_proc_path(unsigned long pid) {
     snprintf(cur_proc_exe_link, PATH_MAX, "/proc/%lu/exe", pid);
@@ -63,21 +96,14 @@ char* get_proc_path(unsigned long pid) {
     return exe_path;
 }
 
-unsigned long get_proc_base_addr(unsigned long pid) {
-    snprintf(cur_proc_maps_link, PATH_MAX, "/proc/%lu/maps", pid);
-    FILE* map_file = fopen(cur_proc_maps_link, "r");
-    char base_addr_buf[20] = {};
-    fread(base_addr_buf, 20, 1, map_file);
-    base_addr_buf[19] = '\0';
-
-    unsigned long base_address = 0;
-    sscanf(base_addr_buf, "%llx-", &base_address);
-
-    fclose(map_file);
-    return base_address;
+int address_to_phase_index(struct app_config* conf, unsigned long addr) {
+    for (int i = 0; i < conf->phase_count; ++i) {
+        if (conf->phase_addr[i] == addr) {
+            return i;
+        }
+    }
+    return -1;
 }
-
-pid_t root_child_pid;
 
 void sigint_handler(int dummy) {
     puts("\n\033[1;33m[!]\033[0m SIGINT on tracer\n");
@@ -109,7 +135,6 @@ int main(int argc, char** argv) {
         while ((child_pid = waitpid(-1, &wstatus, 0)) != -1) {
             if (ps_root->exe_path == NULL) {
                 ps_root->exe_path = get_proc_path(ps_root->pid);
-                ps_root->base_addr = get_proc_base_addr(ps_root->pid);
             }
 
             if (WIFSIGNALED(wstatus)) {
@@ -128,10 +153,9 @@ int main(int argc, char** argv) {
                         silent_printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         struct pstree* ps_child = pstree_mknode(new_pid, strdup(ps_parent->exe_path));
-                        ps_child->base_addr = ps_parent->base_addr;
                         pstree_insert_child(ps_parent, ps_child);
 
-                        init_trace(new_pid);
+                        init_trace(new_pid, conf);
                         break;
                     case (SIGTRAP | (PTRACE_EVENT_EXEC<<8)):
                         unsigned long new_pid;
@@ -139,14 +163,26 @@ int main(int argc, char** argv) {
                         // TODO: what if the exec fails? - I wouldn't want a new pstree entry in this case.
                         silent_printf("\033[1;33m[!]\033[0m Caught ptrace EXEC event! Continuing tracer on %lu\n", new_pid);
                         struct pstree* ps_exec = pstree_mknode(new_pid, get_proc_path(new_pid));
-                        ps_exec->base_addr = get_proc_base_addr(new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         pstree_insert_exec(ps_parent, ps_exec);
                         break;
                 }
                 switch (stop_sig) {
                     case SIGTRAP:
-                        init_trace(child_pid);
+                        struct user_regs_struct regs;
+                        ptrace(PTRACE_GETREGS, child_pid, NULL, &regs);
+                        regs.rip--;
+
+                        int phase_idx = address_to_phase_index(conf, regs.rip);
+                        silent_printf("SIGTRAP! @ 0x%lx with phase idx %d\n", regs.rip, phase_idx);
+                        if (phase_idx != -1) {
+                            silent_printf("TMP BREAKPOINT! @ 0x%lx\n", regs.rip);
+                            ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
+                            ptrace(PTRACE_POKETEXT, child_pid, (void*) regs.rip, breakpoint_original_data[phase_idx]);
+                            ptrace(PTRACE_SYSCALL, child_pid, NULL, NULL);
+                        } else {
+                            init_trace(child_pid, conf);
+                        }
                         break;
                     case SIGTRAP | 0x80:
                         ptrace(PTRACE_GET_SYSCALL_INFO, child_pid, sizeof(syscall_info), &syscall_info);

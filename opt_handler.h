@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define MAX_PHASE_COUNT 10
+
 struct app_config {
     int is_silent;
     int is_tracee_silent;
     char* inferior_path;
     char** inferior_args;
+    int phase_count;
+    unsigned long phase_addr[MAX_PHASE_COUNT];
 };
 
 /*
@@ -18,13 +22,22 @@ struct app_config* handle_cmdline_opts(int argc, char** argv) {
     struct app_config* conf = (struct app_config*)malloc(sizeof(struct app_config));
     int c;
 
-    while ((c = getopt (argc, argv, "sm")) != -1) {
+    conf->phase_count = 0;
+    while ((c = getopt (argc, argv, "smp:")) != -1) {
         switch (c) {
             case 'm':
                 conf->is_silent = 1;
                 break;
             case 's':
                 conf->is_tracee_silent = 1;
+                break;
+            case 'p':
+                if (conf->phase_count == MAX_PHASE_COUNT) {
+                    fprintf(stderr, "Error: the tracer does not support more than %d phases\n", MAX_PHASE_COUNT);
+                    free(conf);
+                    exit(1);
+                }
+                conf->phase_addr[conf->phase_count++] = strtoul(optarg, NULL, 16);
                 break;
             default:
                 fputs("Error: invalid arguments provided!\n", stderr);

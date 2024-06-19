@@ -8,7 +8,6 @@ class AnlSqlite(ProgAnalysis):
         super(AnlSqlite, self).__init__('/usr/bin/sqlite3')
         self.tmp_dir = tempfile.mkdtemp()
         self.tmp_db = self.tmp_dir + '/test.db'
-        # shutil.rmtree(dirpath)
 
     def exec_sql(self, statement):
         return self.exec_with_args([self.tmp_db, statement])
@@ -116,7 +115,13 @@ class AnlSqlite(ProgAnalysis):
         print('Database located at:', self.tmp_db)
         ProgAnalysis.stats(self)
 
+class AnlSqliteMP(AnlSqlite):
+    def __init__(self):
+        super(AnlSqliteMP, self).__init__()
+        # `shell_exec` function
+        self.enable_multi_phase([0x0000000000021df0])
+
 if __name__ == '__main__':
-    asp = AnlSqlite()
+    asp = AnlSqliteMP()
     asp.run_all_cases()
     asp.stats()

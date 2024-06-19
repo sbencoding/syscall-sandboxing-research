@@ -36,7 +36,13 @@ class AnlLs(ProgAnalysis):
     def case_sort_by_time(self):
         self.exec_with_args(['-laht', '/dev'])
 
+class AnlLsMP(AnlLs):
+    def __init__(self):
+        super(AnlLsMP, self).__init__()
+        # call to `clear_files` from `main`
+        self.enable_multi_phase([0x0000000000004b55])
+
 if __name__ == '__main__':
-    asp = AnlLs()
+    asp = AnlLsMP()
     asp.run_all_cases()
     asp.stats()

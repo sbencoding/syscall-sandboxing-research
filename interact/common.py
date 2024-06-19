@@ -1,5 +1,7 @@
 import subprocess
 import inspect
+import signal
+import time
 
 def input_case(func):
     func.position = input_case.idx
@@ -50,8 +52,10 @@ class ProgAnalysis():
     
     def exec_with_external(self, ext_prog, ext_args):
         proc = subprocess.Popen(["./tracer", "-m", *self.opts, '--', self.prog_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        time.sleep(0.2) # wait for program under test to boot up
         ext_proc = subprocess.Popen([ext_prog, *ext_args])
         ext_proc.wait()
+        proc.send_signal(signal.SIGINT)
         return self._process_proc_output(proc)
 
     def run_all_cases(self):

@@ -3,12 +3,13 @@
 #include <sys/ptrace.h>
 #include <linux/ptrace.h> // glibc doesn't necessarily expose the ptrace_syscall_info struct
 #include <sys/wait.h>
-#include <sys/user.h> // for user_reg_struct
+#include <sys/user.h> // for user_regs_struct
 #include <string.h>
 #include <limits.h> // for PATH_MAX
 #include <signal.h>
 #include <fcntl.h>
 
+#include "shared.h" // data shared between multiple source files
 #include "sysnr_map.h" // map syscall numbers to their names
 #include "pstree.h" // Process tree info storage
 #include "opt_handler.h" // Helper file to handle command line arguments
@@ -38,16 +39,18 @@ void mk_banner(const char* banner_text) {
 }
 
 unsigned long breakpoint_original_data[MAX_PHASE_COUNT];
+int is_root = 1;
 
 void init_trace(int child_pid, struct app_config* conf) {
-    if (child_pid == root_child_pid && conf->phase_count != 0) {
-        mk_banner("Multi-phase setup");
+    if (is_root == 1 && conf->phase_count != 0) {
+        is_root = 0;
+        if (conf->is_silent == 0) mk_banner("Multi-phase setup");
         unsigned long base_addr = get_proc_base_addr(child_pid);
-        silent_printf("Process base address is @ 0x%lx\n", base_addr);
+        silent_printf("Process base address is @ \033[1;32m0x%lx\033[0m\n", base_addr);
         for (int i = 0; i < conf->phase_count; ++i) {
             unsigned long phase_addr = base_addr + conf->phase_addr[i];
             conf->phase_addr[i] = phase_addr;
-            silent_printf("Setting breakpoint at address 0x%lx\n", phase_addr);
+            silent_printf("Setting breakpoint at address \033[1;36m0x%lx\033[0m\n", phase_addr);
             breakpoint_original_data[i] = ptrace(PTRACE_PEEKTEXT, child_pid, (void*)phase_addr, NULL);
             ptrace(PTRACE_POKETEXT, child_pid, (void*)phase_addr, 0xcc);
         }
@@ -78,12 +81,57 @@ void print_flat_syscall_list(int* usage_array) {
 
 void ps_callback_syscall_list(struct pstree* node) {
     printf("\n\033[1;32mPID=%lu\033[0m - %s\n", node->pid, node->exe_path);
+    if (node->current_phase != 0) {
+        puts("\n\033[1;36mInit phase\033[0m\n");
+    }
     print_flat_syscall_list(node->syscall_usage);
+
+    for (int i = 0; i < MAX_PHASE_COUNT; ++i) {
+        if (node->extra_phase_syscall_usage[i] == NULL) continue;
+        printf("\n\033[1;36mPhase %d\033[0m\n", i + 1);
+        print_flat_syscall_list(node->extra_phase_syscall_usage[i]);
+    }
 }
 
 void ps_callback_syscall_stats(struct pstree* node) {
     printf("\n\033[1;32mPID=%lu\033[0m - %s\n", node->pid, node->exe_path);
+    if (node->current_phase != 0) {
+        puts("\n\033[1;36mInit phase\033[0m\n");
+    }
     print_syscall_stats(node->syscall_usage);
+    for (int i = 0; i < MAX_PHASE_COUNT; ++i) {
+        if (node->extra_phase_syscall_usage[i] == NULL) continue;
+        printf("\n\033[1;36mPhase %d\033[0m\n", i + 1);
+        print_syscall_stats(node->extra_phase_syscall_usage[i]);
+    }
+}
+
+void phase_tree_visitor(struct pstree* node, int cur_phase, const int max_phase, int usage_arr[][N_SYSCALLS]) {
+    for (int i = 0; i < N_SYSCALLS; ++i) {
+        usage_arr[cur_phase][i] += node->syscall_usage[i];
+    }
+
+    for (int i = 0; i < max_phase; ++i) {
+        if (node->extra_phase_syscall_usage[i] == NULL) continue;
+        for (int j = 0; j < N_SYSCALLS; ++j) {
+            usage_arr[i + 1][j] += node->extra_phase_syscall_usage[i][j];
+        }
+    }
+
+    if (node->exec != NULL) phase_tree_visitor(node->exec, node->current_phase, max_phase, usage_arr);
+    if (node->sibling != NULL) phase_tree_visitor(node->sibling, node->sibling->current_phase, max_phase, usage_arr);
+    if (node->child != NULL) phase_tree_visitor(node->child, node->child->current_phase, max_phase, usage_arr);
+}
+
+void print_flat_phase_list(struct pstree* root, int phase_count) {
+    // +1 because we have an initial default phase
+    int phase_syscall_usage[phase_count + 1][N_SYSCALLS] = {};
+    phase_tree_visitor(root, 0, phase_count, phase_syscall_usage);
+
+    for (int i = 0; i <= phase_count; ++i) {
+        printf("%d:", i);
+        print_flat_syscall_list(phase_syscall_usage[i]);
+    }
 }
 
 int syscall_usage[N_SYSCALLS] = {};
@@ -153,6 +201,7 @@ int main(int argc, char** argv) {
                         silent_printf("\033[1;33m[!]\033[0m Caught ptrace event! Starting tracer on %lu\n", new_pid);
                         ps_parent = pstree_find(ps_root, child_pid);
                         struct pstree* ps_child = pstree_mknode(new_pid, strdup(ps_parent->exe_path));
+                        ps_child->current_phase = ps_parent->current_phase; // Child inherits the phase of the parent
                         pstree_insert_child(ps_parent, ps_child);
 
                         init_trace(new_pid, conf);
@@ -176,6 +225,8 @@ int main(int argc, char** argv) {
                         int phase_idx = address_to_phase_index(conf, regs.rip);
                         silent_printf("SIGTRAP! @ 0x%lx with phase idx %d\n", regs.rip, phase_idx);
                         if (phase_idx != -1) {
+                            struct pstree* ps_node = pstree_find(ps_root, child_pid);
+                            ps_node->current_phase = phase_idx + 1; // +1, because phase 0 is before we hit any phases
                             silent_printf("TMP BREAKPOINT! @ 0x%lx\n", regs.rip);
                             ptrace(PTRACE_SETREGS, child_pid, NULL, &regs);
                             ptrace(PTRACE_POKETEXT, child_pid, (void*) regs.rip, breakpoint_original_data[phase_idx]);
@@ -196,15 +247,16 @@ int main(int argc, char** argv) {
                                 caller = pstree_find(ps_root, child_pid);
                                 caller->syscall.ip = syscall_info.instruction_pointer;
                                 caller->syscall.syscall_nr = syscall_info.entry.nr;
-                                caller->syscall_usage[syscall_info.entry.nr]++;
+                                pstree_register_syscall(caller, syscall_info.entry.nr);
 #else
                                 silent_printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx", child_pid, sysnr_map[syscall_info.entry.nr], syscall_info.entry.nr, syscall_info.instruction_pointer);
 #endif
                                 break;
                             case PTRACE_SYSCALL_INFO_EXIT:
 #ifdef VERBOSE_TRACE
+                                // FIXME: execve doesn't get printed here!
                                 caller = pstree_find(ps_root, child_pid);
-                                silent_printf("[PID=%lu] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx -> %ld\n", child_pid, sysnr_map[caller->syscall.syscall_nr], caller->syscall.syscall_nr, caller->syscall.ip, syscall_info.exit.rval);
+                                silent_printf("[PID=%lu:%d] \033[1;32mSYS_%s\033[0m [%lu] @ %#08lx -> %ld\n", child_pid, caller->current_phase, sysnr_map[caller->syscall.syscall_nr], caller->syscall.syscall_nr, caller->syscall.ip, syscall_info.exit.rval);
 #else
                                 silent_printf(" -> %ld\n", syscall_info.exit.rval);
 #endif
@@ -243,6 +295,14 @@ int main(int argc, char** argv) {
         }
 
         print_flat_syscall_list(syscall_usage);
+
+        if (conf->phase_count != 0) {
+            if (conf->is_silent == 0) {
+                mk_banner("Per phase syscall flat list");
+            }
+
+            print_flat_phase_list(ps_root, conf->phase_count);
+        }
 
         pstree_free(ps_root);
         free(conf);

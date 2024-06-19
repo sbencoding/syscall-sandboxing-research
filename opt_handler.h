@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define MAX_PHASE_COUNT 10
+#include "shared.h"
 
 struct app_config {
     int is_silent;

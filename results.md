@@ -9,12 +9,22 @@ redis: v4.0.9
 ## Dynamic tracer
 This is the program I wrote.
 
+### Single phase model
 * Allowed syscalls for `ls`: `'rt_sigaction', 'lstat', 'getxattr', 'set_robust_list', 'set_tid_address', 'stat', 'munmap', 'getdents', 'mprotect', 'write', 'exit_group', 'ioctl', 'close', 'connect', 'access', 'openat', 'fstat', 'statfs', 'mmap', 'prlimit64', 'readlink', 'brk', 'rt_sigprocmask', 'lseek', 'socket', 'arch_prctl', 'read', 'lgetxattr'`
     - times: `0m0.109s, 0m0.109s, 0m0.094s` (8 cases)
 * Allowed syscalls for `sqlite`: `'lstat', 'rt_sigaction', 'munmap', 'set_robust_list', 'stat', 'fdatasync', 'write', 'access', 'fchown', 'fcntl', 'pread64', 'exit_group', 'prlimit64', 'arch_prctl', 'mprotect', 'getuid', 'rt_sigprocmask', 'ioctl', 'close', 'lseek', 'read', 'geteuid', 'brk', 'getpid', 'openat', 'mmap', 'fstat', 'connect', 'unlink', 'set_tid_address', 'pwrite64', 'socket'`
     - times: `0m0.314s, 0m0.360s, 0m0.360s` (23 cases)
-* Allowed syscalls for `redis-server`: `'mmap', 'arch_prctl', 'rt_sigaction', 'pipe', 'write', 'close', 'epoll_create', 'prlimit64', 'munmap', 'brk', 'exit_group', 'bind', 'setsockopt', 'openat', 'read', 'access', 'fcntl', 'rt_sigprocmask', 'set_tid_address', 'getpid', 'readlink', 'mprotect', 'set_robust_list', 'ioctl', 'sysinfo', 'socket', 'fstat'`
-    - times: `0m0.247s, 0m0.395s, 0m0.363s` (redis-benchmark -n 10)
+* Allowed syscalls for `redis-server`: `'pipe', 'close', 'exit_group', 'access', 'getpid', 'prlimit64', 'fcntl', 'mmap', 'ioctl', 'munmap', 'fsync', 'bind', 'write', 'rt_sigprocmask', 'epoll_wait', 'madvise', 'clone', 'epoll_ctl', 'epoll_create', 'fstat', 'accept', 'set_robust_list', 'socket', 'openat', 'sysinfo', 'rt_sigaction', 'brk', 'readlink', 'read', 'futex', 'setsockopt', 'rt_sigreturn', 'set_tid_address', 'mprotect', 'arch_prctl', 'rename', 'listen'`
+    - times: `0m0.584s, 0m0.689s, 0m0.683s` (redis-benchmark -n 10)
+
+### Multi phase model
+* Allowed syscalls for `ls` (phase split on call to `clear_files` from `main`): `{0: {'brk', 'fstat', 'mprotect', 'access', 'munmap', 'rt_sigaction', 'mmap', 'prlimit64', 'close', 'openat', 'read', 'rt_sigprocmask', 'statfs', 'set_tid_address', 'set_robust_list', 'arch_prctl', 'ioctl'}, 1: {'getdents', 'readlink', 'exit_group', 'fstat', 'mprotect', 'lgetxattr', 'lstat', 'access', 'socket', 'munmap', 'mmap', 'lseek', 'getxattr', 'close', 'openat', 'write', 'read', 'stat', 'connect'}}` (8 cases)
+    - times: `0m0.111s, 0m0.104s, 0m0.110s`
+* Allowed syscalls for `sqlite` (phase split on the `shell_exec` function): `{0: {'ioctl', 'rt_sigaction', 'fstat', 'openat', 'set_tid_address', 'socket', 'brk', 'set_robust_list', 'arch_prctl', 'stat', 'lseek', 'close', 'read', 'prlimit64', 'rt_sigprocmask', 'lstat', 'getuid', 'mprotect', 'getpid', 'pread64', 'access', 'munmap', 'mmap', 'connect'}, 1: {'geteuid', 'fstat', 'exit_group', 'openat', 'fdatasync', 'fchown', 'getpid', 'unlink', 'pread64', 'brk', 'write', 'fcntl', 'stat', 'close', 'read', 'pwrite64'}}` (23 cases)
+    - times: `0m0.393s, 0m0.361s, 0m0.329s`
+* Allowed syscalls for `redis-server` (phase split on the `aeMain` function): `{0: {'fstat', 'openat', 'brk', 'readlink', 'epoll_ctl', 'fcntl', 'pipe', 'bind', 'rt_sigprocmask', 'read', 'socket', 'access', 'sysinfo', 'epoll_create', 'futex', 'munmap', 'listen', 'getpid', 'clone', 'mprotect', 'set_robust_list', 'arch_prctl', 'mmap', 'write', 'prlimit64', 'rt_sigaction',
+'close', 'ioctl', 'set_tid_address', 'setsockopt'}, 1: {'fstat', 'openat', 'fsync', 'epoll_wait', 'epoll_ctl', 'fcntl', 'read', 'accept', 'rename', 'getpid', 'madvise', 'exit_group', 'write', 'close', 'rt_sigreturn', 'setsockopt'}}` (redis-benchmark -n 10)
+    - times: `0m0.796s, 0m0.689s, 0m0.691s`
 
 ## Sysfilter
 * Allowed syscalls for `ls`: `[0,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,24,25,28,32,34,35,39,41,42,43,44,45,46,47,49,50,51,52,54,58,60,62,63,72,78,79,89,96,99,105,106,107,108,113,114,115,116,117,119,137,143,144,145,146,147,186,191,192,201,202,218,228,229,231,234,257,262,273,302,307]`

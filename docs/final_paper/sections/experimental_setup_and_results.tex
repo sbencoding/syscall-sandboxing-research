@@ -5,9 +5,13 @@ The purpose of this section is to state how each tool performed and discussion o
 The reported metrics are the analysis time and the number of blocked system calls.
 
 \subsection {Dynamic analysis solution}
+As described in the experiment setup, the dynamic tracer supports both single phase and multi phase model of execution.
+The following subsections describe the results for each of these 2 models.
+
+\subsubsection {Single phase model}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for the dynamic analysis solution implemented for this research}
+\caption{Blocked system call count and analysis runtime for the dynamic analysis solution implemented for this research, using the single phase execution model}
 \label{tbl:dyn_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -17,7 +21,7 @@ The reported metrics are the analysis time and the number of blocked system call
  \hline
  sqlite & 341 & 344ms \\ 
  \hline
- redis & 346 & 335ms \\ 
+ redis & 346 & 652ms \\
  \hline
 \end{tabular}
 \end{center}
@@ -29,10 +33,36 @@ Out of the 373 system calls available on the host system it blocks 345, as depic
 
 For sqlite and redis the performance is similar, in the 300-400 ms range, blocking 341 and 346 system calls respectively. Just like in the case for \textit{ls}, system calls frequently used when exploiting binaries have been blocked, however due to the nature of the applications the \textit{read} and \textit{write} system calls still allow for some data oriented attacks.
 
+\subsubsection {Multi phase model}
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for the dynamic analysis solution implemented for this research, using the multi phase execution model. The second column depcits the number of blocked systems calls in the first phase, followed by the second phase.}
+\label{tbl:dyn_mp_results}
+\begin{tabular}{||c c c||}
+ \hline
+Program & Blocked syscalls per phase & Runtime \\
+ \hline\hline
+ ls & 345 / 354 & 108ms \\
+ \hline
+ sqlite & 341 / 357 & 361ms \\
+ \hline
+ redis & 346 / 357 & 725ms \\
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+It is important to note, that all system calls made by phase 1 are also included in the allowed system calls of phase 0. This means that although phase 0 only uses 17 unique system calls, it also consideres system calls that are used exclusively by phase 1, hence the lower number of blocked system calls.
+This is done because of how \textit{seccomp} operates, which is further detailed in the discussion.
+
+In the case of \textit{ls}, considering a second execution phase allows for blocking 9 more system calls after phse 0 is done, as depicted in \ref{tbl:dyn_mp_results}, and finishes within 108ms, similar to the speed of the single phase model.
+
+For sqlite, the increase in blocked system calls is even higher, with 16 additional calls blocked in the second phase and analysis finishing within 361ms.
+In the case of redis 11 additional system calls are blocked and anlysis is done in 725ms.
+
 \subsection {sysfilter}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for sysfilter}
+\caption{Blocked system call count and analysis runtime for sysfilter.}
 \label{tbl:sysfilter_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -54,7 +84,7 @@ For redis the analysis finished a bit faster with 13 seconds, blocking 275 syste
 \subsection {Confine}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for Confine}
+\caption{Blocked system call count and analysis runtime for Confine.}
 \label{tbl:confine_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -80,7 +110,7 @@ Since it has multiple components and the usage of statically linked binaries com
 \subsubsection {Sourcealyzer}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for chestnut (Sourcealyzer)}
+\caption{Blocked system call count and analysis runtime for chestnut (Sourcealyzer).}
 \label{tbl:chestnut_src_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -102,7 +132,7 @@ Redis took around 4.5 seconds to analyze, after which 286 system calls got block
 \subsubsection {Binalyzer - syscalls}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - syscalls)}
+\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - syscalls).}
 \label{tbl:chestnut_bin_sys_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -133,7 +163,7 @@ Redis took 9 seconds to analyze using the dynamic version, but only 3 seconds wh
 \subsubsection {Binalyzer - cfg}
 \begin{table}[!h]
 \begin{center}
-\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - cfg)}
+\caption{Blocked system call count and analysis runtime for chestnut (Binalyzer - cfg).}
 \label{tbl:chestnut_bin_cfg_results}
 \begin{tabular}{||c c c||} 
  \hline
@@ -161,3 +191,25 @@ For the statically linked binaries the performance is better.
 \textit{ls} took 11.8 seconds to analyze and 318 system calls got blocked, as shown in Table \ref{tbl:chestnut_bin_cfg_results}.
 For sqlite the analysis took 40.2 seconds and blocked 297 system calls.
 In the case of redis the analysis finished in 1 minute and blocked 292 system calls.
+
+\subsection {Temporal specialization}
+\begin{table}[!h]
+\begin{center}
+\caption{Blocked system call count and analysis runtime for temporal specialization. The second column depcits the number of blocked systems calls in the first phase, followed by the second phase. The thid column contains the runtime for the bitcode generation, followed by the runtime for the full analysis}.
+\label{tbl:tmp_spec_results}
+\begin{tabular}{||c c c||}
+ \hline
+ Program & Blocked syscalls per phase & Runtime \\
+ \hline\hline
+ sqlite & 305 / 311 & 1.91s / 2m 18.37s \\
+ \hline
+ redis & 287 / 295 & 5.97s / 2m 12.78s \\
+ \hline
+\end{tabular}
+\end{center}
+\end{table}
+As explained in the experiment setup, \textit{ls} was not analyzed using this tool, as there was no good candidate function to mark as the worker phase.
+
+In the case of sqlite, adding a second phase allows to block 6 additional system calls, as show in Table \ref{tbl:tmp_spec_results}. Bitcode generation finished under a reasonable 1.91 seconds, however the analysis part took over 2 minutes.
+
+For redis, 8 additional system calls can be blocked in the second phase. Bitcode generation took around 6 seconds, while the analysis can last over 2 minutes, like in the case of sqlite.

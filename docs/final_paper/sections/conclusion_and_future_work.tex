@@ -18,9 +18,19 @@ The research discusses the potentials to speed up analysis time and looks at the
 A key problem of these tools is the difficulty to setup and maintain, such as switching distribution or upgrading a compiler or library.
 A strong positive of these tools is that they are able to generate a relatively precise set of system calls to filter, independent of the given application.
 
+Additionally the multi phase model of execution was investigated in both the static and dynamic analysis context.
+The research shows that static and dynamic analysis have the same drawbacks and advantages as in the case for a single phase execution model.
+Furthermore, based on the results the multi phase execution model is more effective compared to the single phase counterpart, and can be deployed even on applications, which do not follow the general life cycle of server programs.
+A key problem of this approach is the need to identify the optimal transition points.
+A strong positive is the ability to have an even more restrictive filter for certain parts of the execution.
+
 It is possible to perform more research in this area by improving techniques based on this research.
 Based on the results, approaches which precompute and cache call graphs and other results for commonly used libraries tend to spend less time analysing, such as in the case of Confine or chestnut.
 Furthermore, the research shows that incorporating all CPU cores to do the analysis can be beneficial in reducing analysis times.
 
-Additionally, this research did not focus on whether the programs remain functional after applying the given filters, due to lack of time.
+To improve multi phase execution the research highlights 2 core ideas.
+First, defining transition points on the instruction level, which although cumbersome, offers the possibility to split large functions into phases, allowing the technique to be applied to programs such as \textit{ls}, which would not be considered multiple phase.
+Second, the ability to define multiple transition points as opposed to one, although not investigated in this research, should allow for greater flexibility and even more precise filters.
+
+Additionally, this research did not focus on to what extent the programs remain functional after applying the given filters, due to lack of time.
 However to increase confidence in these solutions, and to find potential problems in the various techniques it would be important to investigate this aspect as well.

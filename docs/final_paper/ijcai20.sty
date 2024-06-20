@@ -307,7 +307,7 @@ Abstract}\vspace{0.5ex}\begin{quote}}{\par\end{quote}\vskip 1ex}
 \def\@citex[#1]#2{%
   \def\@lastauthor{}\def\@citea{}%
   \@cite{\@for\@citeb:=#2\do
-    {\@citea\def\@citea{;\penalty\@citeseppen\ }%
+    {\@citea\def\@citea{,\penalty\@citeseppen\ }%
      \if@filesw\immediate\write\@auxout{\string\citation{\@citeb}}\fi
      \@ifundefined{b@\@citeb}{\def\@thisauthor{}{\bf ?}\@warning
        {Citation `\@citeb' on page \thepage \space undefined}}%

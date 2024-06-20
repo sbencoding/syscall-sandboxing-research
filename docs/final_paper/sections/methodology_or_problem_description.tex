@@ -1,6 +1,6 @@
 \section{Background and Related Work}
 \label{sec:background}
-System calls are the interface the kernel provides to applications to perform sensitive operations and interact with hardware devices. This mechanism allows for applications to exist in isolation while running simultaneously, and protects hardware components from malicious behavior to a certain extent. Normally an application is allowed to invoke any system call and so it has the privileges of the user who started the application.
+System calls are the interface the kernel provides to applications to perform privileged operations and interact with hardware devices. This mechanism allows for applications to exist in isolation while running simultaneously, and protects hardware components from malicious behavior to a certain extent. Normally an application is allowed to invoke any system call and so it has the privileges of the user who started the application.
 
 The principle of least privilege demands that every unit of execution is given the minimum amount of privileges that still allows it to fully function \cite{ref_plp_1}. This is ideal since in the case of a user error, an application bug or a vulnerability the potential damage is minimized without decreasing the usability of the given application. The regular flow of system calls thus does not adhere to this principle, since not every application needs access to every system call.
 

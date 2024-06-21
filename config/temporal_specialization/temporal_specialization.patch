@@ -1,0 +1,74 @@
+diff --git a/createSyscallStats.py b/createSyscallStats.py
+index 9d471df..574e437 100644
+--- a/createSyscallStats.py
++++ b/createSyscallStats.py
+@@ -177,7 +177,7 @@ if __name__ == "__main__":
+                     if ( not options.libdebloating ):
+                         #TODO Some features have not been implemented in case of not using library debloating
+                         if ( not os.path.exists(output) ):
+-                            extractSyscallFromSvf.processSyscalls(targetcfg, cfginput, mastermain, workermain, None, None, None, binprofiler, binbasepath + "/" + bininput, options.apptolibmap, appName, output, options.debug, rootLogger, options.cfginputseparator)
++                            extractSyscallFromSvf.processSyscalls(cfgbasepath + "/" + targetcfg, cfginput, mastermain, workermain, None, None, None, binprofiler, binbasepath + "/" + bininput, options.apptolibmap, appName, output, options.debug, rootLogger, options.cfginputseparator)
+                         if ( os.path.exists(output) ):
+                             appSyscallDict = util.readDictFromFile(output)
+                             importTableSyscalls = appSyscallDict["importTable"]
+diff --git a/docker-build/Dockerfile b/docker-build/Dockerfile
+index f6ad7be..2c6e233 100644
+--- a/docker-build/Dockerfile
++++ b/docker-build/Dockerfile
+@@ -1,6 +1,6 @@
+-FROM ubuntu
++FROM ubuntu:18.04
+ 
+-ENV NUM_CORES 8
++ENV NUM_CORES 10
+ ENV ROOT /debloating-vol
+ ENV GIT_REPO temporal-specialization-artifacts
+ ENV GIT_REPO_URL https://github.com/shamedgh/temporal-specialization-artifacts.git
+@@ -49,5 +49,19 @@ RUN chmod u+x run.sh
+ RUN chmod u+x spin.sh
+ RUN git pull
+ 
++# https://llvm.org/docs/GoldPlugin.html
++RUN apt-get install wget
++WORKDIR builds
++RUN wget https://snapshots.sourceware.org/binutils/trunk/2024-06-17_00-44_1718585041/src/binutils-2.42.50-c3d23f753da.tar.xz
++RUN unxz binutils-2.42.50-c3d23f753da.tar.xz && tar xvf binutils-2.42.50-c3d23f753da.tar && rm binutils-2.42.50-c3d23f753da.tar
++WORKDIR gold_build
++RUN ../binutils-2.42.50-c3d23f753da/configure --enable-gold --enable-plugins --disable-werror
++RUN apt-get install -y texinfo
++RUN make -j $NUM_CORES all-gold
++
++WORKDIR $ROOT/$GIT_REPO/llvm-7.0.0.src/build
++RUN cmake -G "Unix Makefiles" -DLLVM_BINUTILS_INCDIR=$ROOT/$GIT_REPO/builds/binutils-2.42.50-c3d23f753da/include -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$ROOT/install ../
++RUN make -j $NUM_CORES && make install/strip
++
+ #CMD ./run.sh $BC $ENTRY
+ CMD ./spin.sh
+diff --git a/docker-build/run.sh b/docker-build/run.sh
+index 05d7cc2..8ee1172 100644
+--- a/docker-build/run.sh
++++ b/docker-build/run.sh
+@@ -27,13 +27,13 @@ python3 python-utils/graphCleaner.py --fpanalysis --funcname main --output callg
+ 
+ mkdir outputs
+ mkdir stats
+-python3 createSyscallStats.py -c ./callgraphs/glibc.callgraph --apptopropertymap app.to.properties.json --binpath ./binaries --outputpath outputs/ --apptolibmap app.to.lib.map.json --sensitivesyscalls sensitive.syscalls --sensitivestatspath stats/sensitive.stats --syscallreductionpath stats/syscallreduction.stats --libdebloating --othercfgpath ./otherCfgs/ --cfgpath callgraphs --singleappname $APP
+-
+-python security-evaluation/getBlockedPayloads.py --blockedSyscallsTempSpl security-evaluation/removedViaTemporalSpecialization.txt --blockedSyscallsLibDeb security-evaluation/removedViaLibDebloating.txt 2>&1 | tee $APP.shellcode.payload.txt
+-python security-evaluation/getBlockedPayloadsROP.py --blockedSyscallsTempSpl security-evaluation/removedViaTemporalSpecialization.txt --blockedSyscallsLibDeb security-evaluation/removedViaLibDebloating.txt 2>&1 | tee $APP.rop.payload.txt
+-
+-cp $APP.shellcode.payload.txt /results/
+-cp $APP.rop.payload.txt /results/
+-
+-cp stats/sensitive.stats /results/$APP.sensitive.stats
+-cp outputs/syscall.count-TABLE2.out /results/$APP.syscall.count
++python3 createSyscallStats.py -c ./callgraphs/glibc.callgraph --apptopropertymap app.to.properties.json --binpath ./binaries --outputpath outputs/ --apptolibmap app.to.lib.map.json --sensitivesyscalls sensitive.syscalls --sensitivestatspath stats/sensitive.stats --syscallreductionpath stats/syscallreduction.stats --othercfgpath ./otherCfgs/ --cfgpath callgraphs --singleappname $APP
++
++#python security-evaluation/getBlockedPayloads.py --blockedSyscallsTempSpl security-evaluation/removedViaTemporalSpecialization.txt --blockedSyscallsLibDeb security-evaluation/removedViaLibDebloating.txt 2>&1 | tee $APP.shellcode.payload.txt
++#python security-evaluation/getBlockedPayloadsROP.py --blockedSyscallsTempSpl security-evaluation/removedViaTemporalSpecialization.txt --blockedSyscallsLibDeb security-evaluation/removedViaLibDebloating.txt 2>&1 | tee $APP.rop.payload.txt
++#
++#cp $APP.shellcode.payload.txt /results/
++#cp $APP.rop.payload.txt /results/
++#
++#cp stats/sensitive.stats /results/$APP.sensitive.stats
++#cp outputs/syscall.count-TABLE2.out /results/$APP.syscall.count

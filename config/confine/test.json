@@ -1,0 +1,13 @@
+{
+    "confine_target": {
+        "enable": "true",
+        "image-name": "confine_target",
+        "image-url": "confine_target",
+        "category": [
+            ""
+        ],
+        "options": "",
+        "args": "",
+        "dependencies": {}
+    }
+}

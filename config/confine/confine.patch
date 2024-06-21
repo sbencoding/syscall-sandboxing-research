@@ -1,0 +1,164 @@
+diff --git a/confine.py b/confine.py
+index 0950727..e710557 100755
+--- a/confine.py
++++ b/confine.py
+@@ -246,6 +246,7 @@ if __name__ == '__main__':
+                     retryCount = 0
+                     while ( retryCount < 2 ):
+ 
++                        print('MONITORING TOOL: ', options.monitoringtool)
+                         newProfile = containerProfiler.ContainerProfiler(depImageName, 
+                                 depImageNameFullPath, depOptions, options.libccfginput, 
+                                 options.muslcfginput, glibcFuncList, muslFuncList, 
+@@ -282,6 +283,7 @@ if __name__ == '__main__':
+                 while ( retryCount < 2 ):
+                     start = time.time()
+ 
++                    print('MONITORING TOOL: ', options.monitoringtool)
+                     newProfile = containerProfiler.ContainerProfiler(imageName,
+                             imageNameFullPath, imageOptions, options.libccfginput, 
+                             options.muslcfginput, glibcFuncList, muslFuncList, 
+diff --git a/container.py b/container.py
+index 998ac4f..0fabd45 100755
+--- a/container.py
++++ b/container.py
+@@ -400,8 +400,9 @@ class Container():
+         #            self.logger.error("ps command doesn't have enough output lines for pid: %s", pid)
+         return pidToUserDict, pidToCmdDict
+ 
+-    def extractLibsFromProc(self):
++    def extractLibsFromProc(self, include_binaries):
+         libSet = set()
++        
+         if ( not self.containerId ):
+             self.logger.error("Trying to extract binary libs from non-running container! self.containerId: %s", self.containerId)
+             return False
+@@ -470,13 +471,19 @@ class Container():
+                         else:
+                             self.logger.debug("Can't extract maps from host because pidToCmd is empty for %s", pid)
+             outLines = out.splitlines()
++            tmpLibSet = set()
++            mergeLibSet = False
+             for line in outLines:
+                 splittedLine = line.split()
+                 if ( len(splittedLine) == 6 ):
+                     libName = splittedLine[5]
+                     permissions = splittedLine[1]
+                     if ( permissions[2] == 'x' ):
+-                        libSet.add(libName)
++                        self.logger.debug('[NEWLIB] - %s; %s' % (pid, libName))
++                        tmpLibSet.add(libName)
++                        if not mergeLibSet and libName in include_binaries: mergeLibSet = True
++
++            if mergeLibSet: libSet = libSet.union(tmpLibSet)
+         self.logger.debug("libs from /proc: %s", str(libSet))
+         return libSet
+ 
+diff --git a/containerProfiler.py b/containerProfiler.py
+index 559c2fa..4d50d9c 100755
+--- a/containerProfiler.py
++++ b/containerProfiler.py
+@@ -16,6 +16,8 @@ import constants as C
+ import binaryAnalysis
+ import processMonitorFactory
+ 
++GHOST_TIME_START = 0
++
+ 
+ class ContainerProfiler():
+     """
+@@ -316,7 +318,7 @@ class ContainerProfiler():
+ 
+         ttr = 10
+         logSleepTime = 60
+-        sysdigTotalRunCount = 3
++        sysdigTotalRunCount = 1
+         if ( binaryReady ):
+             sysdigTotalRunCount = 1
+         sysdigRunCount = 1
+@@ -337,6 +339,9 @@ class ContainerProfiler():
+             self.logger.debug("Trying to kill and delete container which might not be running in loop... Not a problem if returns error")
+             str(myContainer.kill())
+             str(myContainer.delete())
++            print('HI THERE')
++            print(myMonitor)
++            print(self.monitoringTool)
+             self.logger.info("Running sysdig multiple times. Run count: %d from total: %d", sysdigRunCount, sysdigTotalRunCount)
+             sysdigRunCount += 1
+             #sysdigResult = mySysdig.runSysdigWithDuration(logSleepTime)
+@@ -350,7 +355,9 @@ class ContainerProfiler():
+                 self.status = True
+                 self.logger.info("Ran container sleeping for %d seconds to generate logs and extract execve system calls", logSleepTime)
+                 time.sleep(logSleepTime)
++                self.logger.info("The sleep is over waiting for the monitor to complete")
+                 myMonitor.waitUntilComplete()
++                self.logger.info("The monitor is complete now!")
+                 originalLogs = myContainer.checkLogs()
+                 self.logger.debug("originalLog: %s", originalLogs)
+                 time.sleep(10)
+@@ -395,7 +402,10 @@ class ContainerProfiler():
+                         return C.NOPROCESS
+                     self.logger.info("len(psList) from sysdig: %d", len(psList))
+                     # TODO: Do we need to do this?  Or can we just rely on copyFromContainerWithLibs below
+-                    psList = psList.union(myContainer.extractLibsFromProc())
++                    # psList = psList.union(myContainer.extractLibsFromProc())
++                    include_binaries = open('./interest_bins.txt', 'r').read().splitlines()
++                    self.logger.debug('Looking for binaries: %r\n' % include_binaries)
++                    psList = psList.intersection(include_binaries).union(myContainer.extractLibsFromProc(include_binaries))
+                     self.logger.debug("len(psList) after extracting proc list: %d", len(psList))
+                     self.logger.debug("Container: %s PS List: %s", self.name, str(psList))
+                     self.logger.debug("Container: %s extracted psList with %d elements", self.name, len(psList))
+@@ -432,6 +442,7 @@ class ContainerProfiler():
+             self.logger.debug(str(myContainer.delete()))
+ 
+             if ( binaryReady ):
++                GHOST_TIME_START = time.time_ns()
+                 self.logger.info("--->Starting Direct Syscall Extraction")
+                 self.logger.info("Extracting direct system call invocations")
+                 directSyscallSet = self.extractDirectSyscalls(tempOutputFolder)
+@@ -596,7 +607,9 @@ class ContainerProfiler():
+                                     blackListFineGrain.append(syscallMap[i])
+                         i += 1
+ 
++                ghost_took_time = time.time_ns() - GHOST_TIME_START
+                 self.logger.info("************************************************************************************")
++                self.logger.info('Took %r ns\n', ghost_took_time)
+                 self.logger.info("Container Name: %s Num of filtered syscalls (original): %s", self.name, str(len(blackListOriginal)))
+                 self.logger.info("************************************************************************************")
+                 self.logger.info("<---Finished INTEGRATE phase\n")
+diff --git a/python-utils/execsnoop.py b/python-utils/execsnoop.py
+index 143c285..650b81d 100755
+--- a/python-utils/execsnoop.py
++++ b/python-utils/execsnoop.py
+@@ -37,7 +37,7 @@ class Execsnoop(MonitoringTool):
+         #    self.proc.wait(timeout=1)
+ 
+     def runWithDuration(self, duration):
+-        cmd = ["sudo", "execsnoop-bpfcc"]
++        cmd = ["sudo", "/usr/share/bcc/tools/execsnoop"]
+         self.logger.debug("Running command:" + str(cmd))
+         outputFile = open(self.tmpFile, 'w')
+         self.proc = subprocess.Popen(cmd, stdout=outputFile)
+diff --git a/python-utils/processMonitorFactory.py b/python-utils/processMonitorFactory.py
+old mode 100644
+new mode 100755
+diff --git a/python-utils/sysdig.py b/python-utils/sysdig.py
+index cd5db11..f791572 100755
+--- a/python-utils/sysdig.py
++++ b/python-utils/sysdig.py
+@@ -78,6 +78,7 @@ class Sysdig(MonitoringTool):
+                 cmd = ["sudo", "sysdig", "-r", self.tmpFile, "evt.type=" + eventType, "and", "thread.cgroups", "contains", cgroupId ]
+             elif ( containerName != "" ):
+                 cmd = ["sudo", "sysdig", "-r", self.tmpFile, "evt.type=" + eventType, "and", "container.name=" + containerName]
++            self.logger.debug('The command to get sysdig results is: %r' % cmd)
+             result = None
+             for loopCounter in range(3):
+                 result = subprocess.run(cmd, capture_output=True)
+@@ -90,6 +91,7 @@ class Sysdig(MonitoringTool):
+ 
+             outStr = str(result.stdout.decode("utf-8"))
+             self.logger.debug("sysdig output: %s", outStr)
++            self.logger.debug("sysdig error: %s", result.stderr)
+             splittedOut = outStr.splitlines()
+             for line in splittedOut:
+                 splittedLine = line.split()

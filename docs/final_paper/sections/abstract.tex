@@ -1,7 +1,8 @@
 \begin{abstract}
     System call sandboxing is the idea to restrict the set of system calls an application is able to invoke.
-    This reduces the attack surface available to an attack exploiting the binary, and adheres to the principle of least privilege, giving entities the minimum required permissions needed to perform their function.
-    The key goal is to automatically identify which system calls to block, since it is a complex task requiring great insight into the program and its dependencies.
+    This reduces the attack surface available to an attacker exploiting the binary, and adheres to the principle of least privilege, giving entities the minimum required permissions needed to perform their function.
+
+    The key goal is to automatically identify which system calls to block, since it is a complex, manual task requiring great insight into the program and its dependencies.
 
     This paper investigates and compares various static analysis based solutions in this field, such as sysfilter \cite{ref_sp_3}, Confine \cite{ref_sp_2} and Chestnut \cite{ref_sp_1}, by measuring their accuracy and analysis time. Furthermore a simple dynamic analysis based solution is created for the sake of comparison with the previously mentioned tools. The tools are evaluated on a small set of commonly used Linux applications, such as \textit{ls}, \textit{sqlite} and \textit{Redis}, and the results are reported.
 

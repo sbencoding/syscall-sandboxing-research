@@ -1,10 +1,10 @@
 \section{Experiment setup}
 \label{sec:setup}
-During the experiment 5 analysis tools were configured and 3 separate programs were inspect.
+During the experiment 5 analysis tools were configured and 3 separate programs were inspected.
 The environment for the experiment was a Docker container based on the \textit{ubuntu:18.04} image.
 The kernel is that of the host machine, which can be identified by: \textit{6.9.1-arch1-1}.
 The test computer had 16GB of RAM and an \textit{AMD Ryzen 7 4800H} 8 core CPU.
-The analysis timing information was collected by the \textit{time} command, except for one case, which is specifically stated below. More information about what steps of the process got timed for each of the tools can be found below.
+The analysis timing information was collected by the \textit{time} command, except for one case, which is specifically stated below. More information about what steps of the process got timed for each of the tools can also be found below.
 
 The 3 programs under analysis are listed below:
 \begin{itemize}
@@ -24,16 +24,16 @@ Since dynamic analysis requires the program under test to be exercised in order 
 The dynamic tracer also supports the multi phase execution model in order to be compared with temporal specialization \cite{ref_mp_1}. The tool allows specifying the exact instruction at which a phase transition should be considered, by passing the offset of the instruction from the start of the binary as a command line argument. The tracer supports up to 10 phase transition points, however this is easy to extend if needed.
 
 In the case of \textit{ls} the call instruction to \textit{clear\_files} found within the \textit{main} function was chosen as the phase transition point, since most initialization is done before this point, and the work of listing files and folders is done afterwards.
-For sqlite, the first instruction of the \textit{shell\_exec} function was chosen, as this is the part where it start dealing with the query after loading the database and handling other command line options.
-Finally the first instruction of the \textit{aeMain} function is the transition point chosen for \textit{redis}, which is the same transition point chosen by temporal specialization.
+For sqlite, the first instruction of the \textit{shell\_exec} function was chosen, as this is the part where it starts dealing with the query after loading the database and handling other command line options.
+Finally the first instruction of the \textit{aeMain} function is the transition point chosen for redis, which is the same transition point chosen by temporal specialization.
 
 The timing information includes running the simple framework, executing all the defined analysis cases, gathering and printing all results.
 
-The source code for the tracer, as well as for the test framework with the test cases used is available in the project's source code repository.
+The source code for the tracer, as well as the test framework with the test cases used is available in the project's source code repository.
 
 \subsection {sysfilter}
 The sysfilter \cite{ref_sp_3} analysis program, which relies mainly on static analysis, was setup inside the docker container using the instructions given by the authors.
-After the project is built, the programs under analysis were ran through the compiled binary, and the results were gathered.
+After the project was built, the programs under analysis were ran through the compiled analysis tool, and the results were gathered.
 
 The timing information includes only the runtime of the analysis program, which also prints the results.
 
@@ -49,7 +49,7 @@ The input JSON file that defines which containers to test was a simple file cont
 The timing information collected includes the time to analyze extracted binaries and dependencies and to generate a list of used system calls. This specifically excludes the time to run the container and extract the binaries and dependencies from it, in order to make a better comparison to the other tools. The time was measured using the \textit{time.time\_ns()} python function.
 
 \subsection {Chestnut}
-The Chestnut \cite{ref_sp_1} project, which relies mainly on static analysis, has 2 main components performing analysis. \textit{Sourcealyzer} extracts the used systems calls through a compiler pass by patching the LLVM compiler, while the \textit{Binalyzer} scripts work on compiled binaries. The project authors provide \textit{Binalyzer} for cases when using \textit{Sourcealyzer} is not feasible, for example because of the LLVM compiler usage or lack of available source code \cite{ref_sp_1}.
+The Chestnut \cite{ref_sp_1} project, which relies mainly on static analysis, has 2 main components performing analysis. \textit{Sourcealyzer} extracts the used system calls through a compiler pass by patching the LLVM compiler, while the \textit{Binalyzer} scripts operate on already compiled binaries. The project authors provide \textit{Binalyzer} for cases when using \textit{Sourcealyzer} is not feasible, for example because of incompatibility with the LLVM compiler or lack of available source code \cite{ref_sp_1}.
 
 Optionally a second phase of analysis called the \textit{Finalyzer} can be performed either after the aforementioned 2 analysis tools or as a standalone analysis process.
 It is based on dynamic tracing, and its goal is to unblock system calls which were not detected by the static analysis tools, such as in the case when the program under analysis dynamically loads another process as a child.
@@ -61,15 +61,15 @@ Furthermore, to which extent the applications work after blocking the detected s
 The project was built and ran inside the docker container. The \textit{Binalyzer} part got patched by Petr Khartskhaev, to solve an issue where the \textit{syscalls.py} script did not work.
 The experiment evaluates both \textit{syscalls.py} and \textit{cfg.py} on the binaries included with the Ubuntu distribution, as well as the statically built binaries, which are generated by the patched clang compiler explained below.
 
-Furthermore the author has made some modifications to the \textit{Sourcealyzer} part of the project. First, the LLVM download and patch script was modified to apply the patch without user interaction and to also build clang and ldd.
+Furthermore the author has made some modifications to the \textit{Sourcealyzer} part of the project. First, the LLVM download and patch script was modified to apply the patch without user interaction and to also build clang and lld.
 Next, the number of concurrent build jobs were also reduced to 10, since the build process ran into out of memory issues on the computer performing the build.
 
 Afterwards \textit{musl} was setup (commit hash 007997299248b8682dcbb73595c53dfe86071c83), since all dependencies of programs under test need to be rebuilt using a new compiler flag, and building \textit{glibc} using the patched clang compiler did not work due to some missing GNU extensions.
-Then the \textit{musl-clang} wrapper is modified to use the patched linker, instead of the system default, this is required for the intended program analysis to be done.
-Furthermore a copy of the wrapper is made that support static building, since the default one has command line options which imply dynamic linking.
+Then the \textit{musl-clang} wrapper was modified to use the patched linker, instead of the system default, this is required for the intended program analysis to be done.
+Furthermore a copy of the wrapper was made that supports static building, since the default one has command line options which imply dynamic linking.
 
-Next libseccomp is rebuilt (commit hash 9da5d174e3ef219baab020a79c789f2075ace45c) against \textit{musl}, because a chestnut object, that needs to be built into the final analyzed program, depends on it, however the final analyzed program is not built against \textit{glibc} like the installed libseccomp-dev package is.
-In the following step the aforementioned chestnut object is rebuilt against the new libseccomp, and that is the final step to setup the tool.
+Next libseccomp was rebuilt (commit hash 9da5d174e3ef219baab020a79c789f2075ace45c) against \textit{musl}, because a chestnut object, that needs to be built into the final analyzed program, depends on it, however the final analyzed program is not built against \textit{glibc} like the installed libseccomp-dev package is.
+In the following step the aforementioned chestnut object was rebuilt against the new libseccomp, and that is the final step to setup the tool.
 
 From here the programs under analysis need to be rebuilt, with the \textit{-static -lseccomp -fautosandbox} compiler flags, for the tool to perform analysis and include the used system calls in the resulting binaries.
 

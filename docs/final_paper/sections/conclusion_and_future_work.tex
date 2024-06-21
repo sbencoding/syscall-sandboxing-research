@@ -9,16 +9,16 @@ To summarize, this research explored the area of system call sandboxing, compari
 
 A dynamic analysis based implementation was proposed in order to evaluate how well a purely dynamic analysis based solution would perform, since this approach is less popular in the field.
 The results show that such an approach is faster compared to other solutions, and blocks more system calls, although at the cost of accuracy.
-A key problem of the approach is the underestimation of the set of required system calls, which relies on there being a sufficient amount of test cases that explore many possible program state.
+A key problem of the approach is the underestimation of the set of required system calls, which relies on there being a sufficient amount of test cases that explore many possible program states.
 A strong positive of this approach is the ability to create custom system call filters based on usage pattern, thus achieving more security.
 
 Static analysis based tools, namely sysfilter, Confine and chestnut, were set up and tested.
 The results show that each implementation blocks a different number of system calls and does so with varying analysis time.
 The research discusses the potentials to speed up analysis time and looks at the advantages and drawbacks of these tools, also taking into account the ease of setup and usability.
-A key problem of these tools is the difficulty to setup and maintain, such as switching distribution or upgrading a compiler or library.
+A key problem of these tools is the difficulty to setup and maintain them, when switching distributions or upgrading a compiler or library.
 A strong positive of these tools is that they are able to generate a relatively precise set of system calls to filter, independent of the given application.
 
-Additionally the multi phase model of execution was investigated in both the static and dynamic analysis context.
+Additionally the multi phase model of execution was investigated in both the static (temporal specialization \cite{ref_mp_1}) and dynamic analysis context (the dynamic tracer with multi phase support).
 The research shows that static and dynamic analysis have the same drawbacks and advantages as in the case for a single phase execution model.
 Furthermore, based on the results the multi phase execution model is more effective compared to the single phase counterpart, and can be deployed even on applications, which do not follow the general life cycle of server programs.
 A key problem of this approach is the need to identify the optimal transition points.

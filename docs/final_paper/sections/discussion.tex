@@ -1,6 +1,6 @@
 \section{Discussion}
 \label{sec:discussion}
-This section explores the results stated in the previous section and attempts to find explanations or new connections between topics.
+This section explores the results stated in the Results section and attempts to find explanations or new connections between topics.
 The following subsections first investigate the set of blocked system calls among the different tools, then look at the runtime of the analysis.
 Next the setup and usability of the tools is investigated, and lastly the results of the multi phase execution model are discussed.
 
@@ -26,12 +26,12 @@ Perhaps another positive note about dynamic analysis is that it is possible for 
 \begin{figure}
     \centering
     \includegraphics[width=\columnwidth]{./chart_timings.png}
-    \caption{Analysis times for all investigated analysis tools for sqlite.}
+    \caption{Analysis times for all investigated analysis tools for redis.}
     \label{fig:timings}
 \end{figure}
 From the aspect of analysis time it can be seen that the dynamic analysis solution takes the least amount of time, as shown in Figure \ref{fig:timings}, therefore it leaves room for more analysis cases to be added, until the analysis time approaches that of the static analysis tools.
 
-The second fastest solution is confine with 1-2 seconds spent per program on average. This is because confine contains a pre-computed call graph for certain libc versions, and thus skips the steps where most analysis tools spend their time, analyzing what systems calls the libc functions make that are used by the given program. Therefore a promising technique to speed up analysis could be precomputing results for popular libraries and dependencies.
+The third fastest solution is confine with 1-2 seconds spent per program on average. This is because confine contains a pre-computed call graph for certain libc versions, and thus skips the steps where most analysis tools spend their time, analyzing what system calls the libc functions make that are used by the given program. Therefore a promising technique to speed up analysis could be precomputing results for popular libraries and dependencies.
 
 The next fastest solution is perhaps surprisingly the Sourcealyzer part of Chestnut, with 1-4 seconds of analysis time per program. Although this may be unexpected a first, a significant speedup is achieved by utilizing multiple cores. Since the Sourcalyzer is implemented as an LLVM pass it has the same parallelization options as other compiler tasks, and thus allowing 16 concurrent jobs while testing greatly favors solutions which take advantage of multiple cores. In comparison, all of the other solutions relied on single core execution, therefore another opportunity to increase analysis speeds is to utilize multiple cores.
 
